@@ -48,21 +48,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Minimal config: countries supported and mapping to Vavoo group filters
 const SUPPORTED_COUNTRIES = [
-    { id: 'it', name: 'Italia', group: 'Italy' },
     { id: 'uk', name: 'United Kingdom', group: 'United Kingdom' },
-    { id: 'fr', name: 'France', group: 'France' },
-    { id: 'de', name: 'Germany', group: 'Germany' },
-    { id: 'pt', name: 'Portugal', group: 'Portugal' },
-    { id: 'es', name: 'Spain', group: 'Spain' },
-    { id: 'al', name: 'Albania', group: 'Albania' },
-    { id: 'tr', name: 'Turkey', group: 'Turkey' },
-    { id: 'nl', name: 'Nederland', group: 'Nederland' },
-    { id: 'ar', name: 'Arabia', group: 'Arabia' },
-    { id: 'bk', name: 'Balkans', group: 'Balkans' },
-    { id: 'ru', name: 'Russia', group: 'Russia' },
-    { id: 'ro', name: 'Romania', group: 'Romania' },
-    { id: 'pl', name: 'Poland', group: 'Poland' },
-    { id: 'bg', name: 'Bulgaria', group: 'Bulgaria' },
 ];
 
 const VAVOO_WORKER_URLS = (process.env.VAVOO_WORKER_URL || '').split(',').map((u: string) => u.trim()).filter(Boolean);
@@ -565,6 +551,8 @@ function findBestLogoAny(baseName: string): string | undefined {
 }
 
 function categoriesOptionsForCountry(countryId: string): string[] {
+    // UK genres are curated against the user's master channel list.
+    if (countryId === 'uk') return ['Tutti', ...UK_DISCOVER_CATEGORIES.map(category => category.name)];
     // Italy uses categoriesMap (from M3U), others will use static list (loaded later)
     try {
         if (countryId === 'it') {
@@ -1488,13 +1476,15 @@ const manifest: Manifest = {
     // Explicitly include both 'vavoo' and 'vavoo_' so clients that match prefixes strictly will route streams here
     idPrefixes: ['vavoo', 'vavoo_'],
     catalogs: [
-        // Only the seven curated UK categories are shown in Discover.
-        ...UK_DISCOVER_CATEGORIES.map(category => ({
-            id: `${UK_DISCOVER_CATALOG_PREFIX}${category.id}`,
+        {
+            id: buildTvCatalogId('uk'),
             type: 'tv' as const,
-            name: `TvVoo • UK • ${category.name}`,
-            extra: [{ name: 'skip', isRequired: false }]
-        }))
+            name: 'TvVoo • United Kingdom',
+            extra: [
+                { name: 'genre', options: categoriesOptionsForCountry('uk'), isRequired: false },
+                { name: 'skip', isRequired: false }
+            ]
+        }
     ],
     resources: ['catalog', 'meta', 'stream'],
     behaviorHints: { configurable: true, configurationRequired: false, epgProvider: true } as any,
@@ -1595,11 +1585,21 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
             rows = rows.filter(r => allowed.has(normalizeName(r.baseName)));
         }
         if (selectedGenre && !treatAsAll) {
-            rows = rows.filter(r => {
-                const hint = getResolvedHint(country.id, r.baseName);
-                const cat = hint.cat;
-                return cat && normCatStr(cat) === normCatStr(selectedGenre);
-            });
+            if (country.id === 'uk') {
+                const category = UK_DISCOVER_CATEGORIES.find(item => normCatStr(item.name) === normCatStr(selectedGenre));
+                if (category) {
+                    const allowed = new Set<string>(category.channels.map(name => normalizeName(name)));
+                    rows = rows.filter(r => allowed.has(normalizeName(r.baseName)));
+                } else {
+                    rows = [];
+                }
+            } else {
+                rows = rows.filter(r => {
+                    const hint = getResolvedHint(country.id, r.baseName);
+                    const cat = hint.cat;
+                    return cat && normCatStr(cat) === normCatStr(selectedGenre);
+                });
+            }
         }
         // Ricerca fuzzy con Levenshtein: ammette errori di battitura
         if (searchQ) {
