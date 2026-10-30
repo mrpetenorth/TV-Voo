@@ -443,7 +443,7 @@ function getUkCustomPoster(name: string): string | undefined {
 
 // Keep the exact existing channel logo and place it on the shared TvVoo artwork.
 function getUkLogoPosterUrl(name: string, logoUrl?: string): string | undefined {
-    if (!logoUrl || !/^https?:\\/\\//i.test(logoUrl)) return undefined;
+    if (!logoUrl || !/^https?:\/\//i.test(logoUrl)) return undefined;
     return `https://tv-voo.onrender.com/uk-poster.svg?name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
 }
 
