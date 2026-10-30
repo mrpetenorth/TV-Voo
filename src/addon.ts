@@ -552,7 +552,7 @@ function findBestLogoAny(baseName: string): string | undefined {
 
 function categoriesOptionsForCountry(countryId: string): string[] {
     // UK genres are curated against the user's master channel list.
-    if (countryId === 'uk') return ['All channels', ...UK_DISCOVER_CATEGORIES.map(category => category.name)];
+    if (countryId === 'uk') return ['All Genres', ...UK_DISCOVER_CATEGORIES.map(category => category.name)];
     // Italy uses categoriesMap (from M3U), others will use static list (loaded later)
     try {
         if (countryId === 'it') {
@@ -594,7 +594,7 @@ function isAllGenre(s?: string): boolean {
     const v = normCatStr(s);
     // Common variants coming from different UIs/locales
     // 'genre' is sent by Stremio when clicking the default unselected filter option
-    return v === '' || v === 'tutti' || v === 'all' || v === 'all channels' || v === 'any' || v === 'none' || v === 'genre';
+    return v === '' || v === 'tutti' || v === 'all' || v === 'all channels' || v === 'all genres' || v === 'any' || v === 'none' || v === 'genre';
 }
 
 // Categories to always hide from filters and meta genres
