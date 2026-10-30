@@ -181,6 +181,11 @@ function cleanupChannelName(name: string): string {
         .trim();
 }
 
+function displayChannelName(name: string): string {
+    // Keep the source stream selection unchanged, but show the channel's clean display name.
+    return cleanupChannelName(name).replace(/\\s+\\b(?:HD|UHD|4K)\\b\\s*$/i, '').trim();
+}
+
 function normalizeName(s: string): string {
     const normalized = (s || '')
         .toLowerCase()
@@ -1637,7 +1642,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
                 return {
                     id: channelId,
                     type: 'tv',
-                    name: baseName,
+                    name: displayChannelName(baseName),
                     poster: posterArt || actualLogoArt || getPlaceholderPoster(baseName),
                     posterShape: 'square' as any,
                     logo: logoArt || getPlaceholderLogo(baseName),
@@ -1739,7 +1744,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
             return {
                 id: `vavoo_${encodeURIComponent(baseName)}|group:${country.id}`,
                 type: 'tv',
-                name: baseName,
+                name: displayChannelName(baseName),
                 poster: posterArt || actualLogoArt || getPlaceholderPoster(baseName),
                 posterShape: 'square' as any,
                 logo: logoArt || getPlaceholderLogo(baseName),
