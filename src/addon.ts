@@ -1491,7 +1491,7 @@ const manifest: Manifest = {
         {
             id: buildTvCatalogId('uk'),
             type: 'tv' as const,
-            name: 'TvVoo • United Kingdom',
+            name: 'United Kingdom',
             extra: [
                 { name: 'genre', options: categoriesOptionsForCountry('uk'), isRequired: false },
                 { name: 'skip', isRequired: false }
@@ -1764,10 +1764,10 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
             const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
             const posterArt = country.id === 'it'
                 ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
-                : getWorldCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName);
+                : getWorldCoverPortrait(baseName) || fallbackArt;
             const backgroundArt = country.id === 'it'
                 ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
-                : getWorldCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined;
+                : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
             const cat = hint.cat;
             // EPG (Italy only)
             let description: string | undefined = undefined;
@@ -1958,7 +1958,7 @@ builder.defineMetaHandler(async ({ type, id }: { type: string; id: string }) => 
             nowDesc = reduce15(nowDesc);
         }
         vdbg('META', { id, name, vavooUrl });
-        const metaOut: any = { id, type: 'tv', name, poster: poster || actualLogoArt || getPlaceholderPoster(baseName), posterShape: 'poster' as any, logo: logoArt || getPlaceholderLogo(baseName), background: background || actualLogoArt || fallbackArt || undefined };
+        const metaOut: any = { id, type: 'tv', name, poster: poster || fallbackArt, posterShape: 'poster' as any, logo: logoArt || getPlaceholderLogo(baseName), background: background || fallbackArt || undefined };
         if (cid) {
             const cat = cid === 'it' ? findBestCategory(cid, baseName) : findStaticCategory(cid, baseName);
             if (cat && !isBannedCategory(cat)) metaOut.genres = [cat];
@@ -2490,7 +2490,7 @@ app.get(['/cfg-:cfg/free/manifest.json', '/cfg-:cfg/force/manifest.json', '/cfg-
                         { name: 'skip', isRequired: false }
                     ];
                     if (opts.length) extra.push({ name: 'genre', options: opts, isRequired: false } as any);
-                    return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: `TvVoo • ${c.name}`, extra };
+                    return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: c.id === 'uk' ? 'United Kingdom' : `TvVoo • ${c.name}`, extra };
                 }),
                 // TV Search catalogs (search only)
                 ...countries.map(c => ({
@@ -2546,7 +2546,7 @@ app.get(['/:cfg/free/manifest.json', '/:cfg/manifest.json'], (req: Request, res:
                         ...(c.id === EPG_COUNTRY_ID ? [{ name: 'date', isRequired: false }] : [])
                     ];
                     if (opts.length) extra.push({ name: 'genre', options: opts, isRequired: false } as any);
-                    return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: `Vavoo TV • ${c.name}`, extra };
+                    return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: c.id === 'uk' ? 'United Kingdom' : `Vavoo TV • ${c.name}`, extra };
                 }),
                 // TV Search catalogs (search only)
                 ...countries.map(c => ({
@@ -2586,7 +2586,7 @@ app.get(['/free/manifest.json', '/manifest.json'], (req: Request, res: Response)
                     ...(c.id === EPG_COUNTRY_ID ? [{ name: 'date', isRequired: false }] : [])
                 ];
                 if (opts.length) extra.push({ name: 'genre', options: opts, isRequired: false } as any);
-                return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: `Vavoo TV • ${c.name}`, extra };
+                return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: c.id === 'uk' ? 'United Kingdom' : `Vavoo TV • ${c.name}`, extra };
             }),
             // TV Search catalogs (search only)
             ...countries.map(c => ({
