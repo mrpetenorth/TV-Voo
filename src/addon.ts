@@ -1894,10 +1894,10 @@ builder.defineMetaHandler(async ({ type, id }: { type: string; id: string }) => 
         const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
         const poster = cid === 'it'
             ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
-            : getWorldCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName);
+            : getWorldCoverPortrait(baseName) || fallbackArt;
         const background = cid === 'it'
             ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
-            : getWorldCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined;
+            : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
         // Try to enrich with EPG now/next only for Italy
         let nowTitle: string | undefined;
         let nowDesc: string | undefined;
