@@ -1714,10 +1714,10 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
                 const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
                 const posterArt = country.id === 'it'
                     ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
-                    : getWorldCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName);
+                    : getWorldCoverPortrait(baseName) || getPlaceholderPoster(baseName);
                 const backgroundArt = country.id === 'it'
                     ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
-                    : getWorldCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined;
+                    : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
                 const cat = hint.cat;
                 const channelId = `vavoo_${encodeURIComponent(baseName)}|group:${country.id}`;
 
