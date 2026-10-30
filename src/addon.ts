@@ -317,7 +317,7 @@ const UK_DISCOVER_CATEGORIES = [
         id: 'documentary',
         name: 'Documentary',
         channels: [
-            'BBC NEWS', 'SKY DOCUMENTARIES', 'SKY HISTORY', 'SKY NATURE',
+            'BBC NEWS', 'SKY CRIME', 'SKY DOCUMENTARIES', 'SKY HISTORY', 'SKY NATURE',
             'SKY ARTS', 'EDEN', 'SMITHSONIAN CHANNEL', 'DISCOVERY CHANNEL',
             'DISCOVERY HISTORY', 'DISCOVERY ID', 'DISCOVERY SCIENCE',
             'QUEST', 'QUEST RED', 'HISTORY CHANNEL', 'HISTORY 2',
