@@ -183,7 +183,7 @@ function cleanupChannelName(name: string): string {
 
 function displayChannelName(name: string): string {
     // Keep the source stream selection unchanged, but show the channel's clean display name.
-    return cleanupChannelName(name).replace(/\\s+\\b(?:HD|UHD|4K)\\b\\s*$/i, '').trim();
+    return cleanupChannelName(name).replace(/\s+\b(?:HD|UHD|4K)\b\s*$/i, '').trim();
 }
 
 function normalizeName(s: string): string {
