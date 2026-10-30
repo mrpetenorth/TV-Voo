@@ -426,10 +426,14 @@ function findGeneratedCover(map: Record<string, string>, name: string): string |
 }
 
 function getWorldCoverPortrait(name: string): string | undefined {
+    // The current Channel 4/5 world-cover artwork is branded with +1.
+    // Use the channel's normal logo with the designed fallback poster instead.
+    if (['channel 4', 'channel 5'].includes(normalizeName(name))) return undefined;
     return findGeneratedCover(COVERS_WORLD_MAP, name);
 }
 
 function getWorldCoverLandscape(name: string): string | undefined {
+    if (['channel 4', 'channel 5'].includes(normalizeName(name))) return undefined;
     return deriveLandscapeFromPortrait(getWorldCoverPortrait(name))
         || findGeneratedCover(COVERS_LANDSCAPE_MAP, name)
         || undefined;
