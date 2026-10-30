@@ -182,39 +182,100 @@ function cleanupChannelName(name: string): string {
 }
 
 function normalizeName(s: string): string {
-    return (s || '')
+    const normalized = (s || '')
         .toLowerCase()
-        .replace(/\bhd\b|\buhd\b|\b4k\b|\btv\b|\bchannel\b|\bplus\b/g, ' ')
+        .replace(/\bhd\b|\buhd\b|\b4k\b|\btv\b|\bplus\b/g, ' ')
         .replace(/\bsports\b/g, 'sport')
         .replace(/[^a-z0-9]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+    // Common UK listing variations.
+    return normalized
+        .replace(/^itv be$/, 'itvbe')
+        .replace(/^5usa$/, '5 usa');
 }
 
 
-// Personal UK catalogue: keep only the channels requested by the user, in their
-// chosen order. HD/SD suffixes are ignored for matching, then HD is preferred.
+// Personal UK catalogue: retain the user's exact requested order.
+// HD/UHD/4K variants are preferred where the source provides them.
 const UK_PERSONAL_CHANNELS = [
-    'BBC ONE HD', 'BBC THREE', 'BBC FOUR', 'BLAZE', 'CHALLENGE',
-    'CHANNEL 4 HD', 'CHANNEL 5 HD', 'DAVE', 'DRAMA', 'CBS ACTION',
-    'CBS DRAMA', 'CBS JUSTICE', 'COMEDY CENTRAL', 'DISCOVERY CHANNEL',
-    'DISCOVERY HISTORY', 'DISCOVERY ID', 'DISCOVERY SCIENCE', 'BOOMERANG',
-    'CARTOON NETWORK HD', 'DISNEY XD', 'BBC NEWS', 'DISNEY CHANNEL',
-    'BOX NATION', 'E4', 'EDEN', 'GOLD HD', 'HISTORY 2 HD', 'HORRORXTRA',
-    'QUEST HD', 'QUEST RED HD', 'FILM4 HD', 'GREAT! CHRISTMAS', 'HALLMARK',
-    'HISTORY CHANNEL HD', 'ITV1 HD', 'ITV2 HD', 'ITV3 HD', 'ITV4 HD',
-    'ITVBE HD', 'MGM HD', 'MORE4 HD', 'SKY ATLANTIC HD', 'SKY CRIME HD',
-    'SKY DOCUMENTARIES HD', 'SKY HISTORY HD', 'SKY MAX HD', 'SKY MIX HD',
-    'SKY NATURE HD', 'MY5', 'MTV LIVE', 'SKY ARTS HD', 'PICK HD',
-    'RTE ONE', 'RTE TWO', 'SKY COMEDY HD', 'SKY FAMILY HD',
-    'SKY SCI-FI HORROR HD', 'SKY SPORTS ACTION', 'SKY SPORTS ARENA',
-    'SKY SPORTS FOOTBALL', 'SKY SPORTS GOLF', 'SKY SPORTS PREMIER LEAGUE',
-    'SKY SPORTS TENNIS', 'TNT SPORTS 1', 'TNT SPORTS 2', 'TNT SPORTS 3',
-    'TNT SPORTS 4', 'TNT SPORTS ULTIMATE', 'TNT SPORTS BOX OFFICE',
-    'PREMIER SPORTS 1', 'PREMIER SPORTS 2', 'SMITHSONIAN CHANNEL HD',
-    'PARLIAMENT', 'SKY SPORTS MAIN EVENT', 'TCM MOVIES', 'THATS TV GOLD',
-    'UNIVERSAL CHANNEL', 'WATCH', 'YESTERDAY', 'TNT SPORTS ESPN',
-    'UFC FIGHT NIGHT PASS', 'WWE HD'
+    'BBC ONE',
+    'BBC TWO',
+    'BBC THREE',
+    'BBC FOUR',
+    'BBC NEWS',
+    'ITV1',
+    'ITV2',
+    'ITV3',
+    'ITV4',
+    'ITV BE',
+    'CHANNEL 4',
+    'E4',
+    'MORE4',
+    'FILM4',
+    'CHANNEL 5',
+    'MY5',
+    '5USA',
+    'SKY SPORTS PREMIER LEAGUE',
+    'SKY SPORTS FOOTBALL',
+    'SKY SPORTS MAIN EVENT',
+    'SKY SPORTS ACTION',
+    'SKY SPORTS ARENA',
+    'SKY SPORTS TENNIS',
+    'SKY SPORTS GOLF',
+    'TNT SPORTS 1',
+    'TNT SPORTS 2',
+    'TNT SPORTS 3',
+    'TNT SPORTS 4',
+    'TNT SPORTS ESPN',
+    'TNT SPORTS ULTIMATE',
+    'TNT SPORTS BOX OFFICE',
+    'PREMIER SPORTS 1',
+    'PREMIER SPORTS 2',
+    'BOX NATION',
+    'WWE',
+    'SKY ATLANTIC',
+    'SKY CRIME',
+    'SKY DOCUMENTARIES',
+    'SKY HISTORY',
+    'SKY MAX',
+    'SKY MIX',
+    'SKY NATURE',
+    'SKY ARTS',
+    'EDEN',
+    'SMITHSONIAN CHANNEL',
+    'DISCOVERY CHANNEL',
+    'DISCOVERY HISTORY',
+    'DISCOVERY ID',
+    'DISCOVERY SCIENCE',
+    'QUEST',
+    'QUEST RED',
+    'HISTORY CHANNEL',
+    'HISTORY 2',
+    'HORRORXTRA',
+    'RTÉ ONE',
+    'RTÉ TWO',
+    'UNIVERSAL CHANNEL',
+    'COMEDY CENTRAL',
+    'DAVE',
+    'BLAZE',
+    'CHALLENGE',
+    'CBS ACTION',
+    'CBS DRAMA',
+    'CBS JUSTICE',
+    'DRAMA',
+    'GOLD',
+    'THATS TV GOLD',
+    'YESTERDAY',
+    'WATCH',
+    'PICK',
+    'MTV LIVE',
+    'BOOMERANG',
+    'CARTOON NETWORK',
+    'DISNEY CHANNEL',
+    'DISNEY',
+    'GREAT! CHRISTMAS',
+    'HALLMARK'
 ] as const;
 
 function selectPersonalUkRows<T extends { it: any; baseName: string }>(input: T[]): T[] {
