@@ -425,6 +425,22 @@ function findGeneratedCover(map: Record<string, string>, name: string): string |
     return undefined;
 }
 
+const UK_CUSTOM_POSTER_MAP: Record<string, string> = {
+    'itvbe': 'https://raw.githubusercontent.com/mrpetenorth/TV-Voo/main/public/posters/itv-be.svg',
+    'sky sport tennis': 'https://raw.githubusercontent.com/mrpetenorth/TV-Voo/main/public/posters/sky-sports-tennis.svg',
+    'tnt sport 1': 'https://raw.githubusercontent.com/mrpetenorth/TV-Voo/main/public/posters/tnt-sports-1.svg',
+    'tnt sport 2': 'https://raw.githubusercontent.com/mrpetenorth/TV-Voo/main/public/posters/tnt-sports-2.svg',
+    'sky history': 'https://raw.githubusercontent.com/mrpetenorth/TV-Voo/main/public/posters/sky-history.svg',
+    'rte one': 'https://raw.githubusercontent.com/mrpetenorth/TV-Voo/main/public/posters/rte-one.svg',
+    'rte two': 'https://raw.githubusercontent.com/mrpetenorth/TV-Voo/main/public/posters/rte-two.svg',
+    'channel 4': 'https://raw.githubusercontent.com/mrpetenorth/TV-Voo/main/public/posters/channel-4.svg',
+    'channel 5': 'https://raw.githubusercontent.com/mrpetenorth/TV-Voo/main/public/posters/channel-5.svg',
+};
+
+function getUkCustomPoster(name: string): string | undefined {
+    return UK_CUSTOM_POSTER_MAP[normalizeName(name)];
+}
+
 function getWorldCoverPortrait(name: string): string | undefined {
     // The current Channel 4/5 world-cover artwork is branded with +1.
     // Use the channel's normal logo with the designed fallback poster instead.
@@ -1718,7 +1734,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
                 const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
                 const posterArt = country.id === 'it'
                     ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
-                    : getWorldCoverPortrait(baseName) || getPlaceholderPoster(baseName);
+                    : getUkCustomPoster(baseName) || getWorldCoverPortrait(baseName) || fallbackArt;
                 const backgroundArt = country.id === 'it'
                     ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
                     : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
@@ -1764,7 +1780,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
             const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
             const posterArt = country.id === 'it'
                 ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
-                : getWorldCoverPortrait(baseName) || fallbackArt;
+                : getUkCustomPoster(baseName) || getWorldCoverPortrait(baseName) || fallbackArt;
             const backgroundArt = country.id === 'it'
                 ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
                 : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
