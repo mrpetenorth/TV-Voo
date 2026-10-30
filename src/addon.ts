@@ -285,6 +285,71 @@ const UK_PERSONAL_CHANNELS = [
     'HALLMARK'
 ] as const;
 
+// UK Discover catalogues. Channel arrays are deliberately written in master-list order.
+const UK_DISCOVER_CATEGORIES = [
+    {
+        id: 'entertainment',
+        name: 'Entertainment',
+        channels: [
+            'BBC ONE', 'BBC TWO', 'BBC THREE', 'BBC FOUR',
+            'ITV1', 'ITV2', 'ITV3', 'ITV4', 'ITV BE',
+            'CHANNEL 4', 'E4', 'MORE4', 'CHANNEL 5', 'MY5', '5USA',
+            'SKY ATLANTIC', 'SKY MAX', 'SKY MIX',
+            'RTÉ ONE', 'RTÉ TWO', 'UNIVERSAL CHANNEL',
+            'COMEDY CENTRAL', 'DAVE', 'BLAZE', 'CHALLENGE',
+            'CBS ACTION', 'CBS DRAMA', 'CBS JUSTICE',
+            'DRAMA', 'WATCH', 'PICK', 'HALLMARK'
+        ]
+    },
+    {
+        id: 'sport',
+        name: 'Sport',
+        channels: [
+            'SKY SPORTS PREMIER LEAGUE', 'SKY SPORTS FOOTBALL',
+            'SKY SPORTS MAIN EVENT', 'SKY SPORTS ACTION',
+            'SKY SPORTS ARENA', 'SKY SPORTS TENNIS', 'SKY SPORTS GOLF',
+            'TNT SPORTS 1', 'TNT SPORTS 2', 'TNT SPORTS 3', 'TNT SPORTS 4',
+            'TNT SPORTS ESPN', 'TNT SPORTS ULTIMATE', 'TNT SPORTS BOX OFFICE',
+            'PREMIER SPORTS 1', 'PREMIER SPORTS 2', 'BOX NATION', 'WWE'
+        ]
+    },
+    {
+        id: 'documentary',
+        name: 'Documentary',
+        channels: [
+            'BBC NEWS', 'SKY DOCUMENTARIES', 'SKY HISTORY', 'SKY NATURE',
+            'SKY ARTS', 'EDEN', 'SMITHSONIAN CHANNEL', 'DISCOVERY CHANNEL',
+            'DISCOVERY HISTORY', 'DISCOVERY ID', 'DISCOVERY SCIENCE',
+            'QUEST', 'QUEST RED', 'HISTORY CHANNEL', 'HISTORY 2',
+            'BLAZE', 'YESTERDAY'
+        ]
+    },
+    {
+        id: 'classic',
+        name: 'Classic',
+        channels: [
+            'SKY HISTORY', 'DRAMA', 'GOLD', 'THATS TV GOLD', 'YESTERDAY', 'WATCH'
+        ]
+    },
+    {
+        id: 'music',
+        name: 'Music',
+        channels: ['SKY ARTS', 'MTV LIVE']
+    },
+    {
+        id: 'movies',
+        name: 'Movies',
+        channels: ['FILM4', 'HORRORXTRA', 'GREAT! CHRISTMAS', 'HALLMARK']
+    },
+    {
+        id: 'kids',
+        name: 'Kids',
+        channels: ['BOOMERANG', 'CARTOON NETWORK', 'DISNEY CHANNEL', 'DISNEY']
+    }
+] as const;
+
+const UK_DISCOVER_CATALOG_PREFIX = 'vavoo_uk_';
+
 function selectPersonalUkRows<T extends { it: any; baseName: string }>(input: T[]): T[] {
     const selected: T[] = [];
     for (const wanted of UK_PERSONAL_CHANNELS) {
@@ -1423,22 +1488,12 @@ const manifest: Manifest = {
     // Explicitly include both 'vavoo' and 'vavoo_' so clients that match prefixes strictly will route streams here
     idPrefixes: ['vavoo', 'vavoo_'],
     catalogs: [
-        // TV catalogs for Discovery (with genres)
-        ...SUPPORTED_COUNTRIES.map(c => ({
-            id: buildTvCatalogId(c.id),
+        // Only the seven curated UK categories are shown in Discover.
+        ...UK_DISCOVER_CATEGORIES.map(category => ({
+            id: `${UK_DISCOVER_CATALOG_PREFIX}${category.id}`,
             type: 'tv' as const,
-            name: `TvVoo • ${c.name}`,
-            extra: [
-                ...(c.id === EPG_COUNTRY_ID ? [{ name: 'date', isRequired: false }] : []),
-                { name: 'skip', isRequired: false }
-            ]
-        })),
-        // TV Search catalogs (search only, not shown in Discovery)
-        ...SUPPORTED_COUNTRIES.map(c => ({
-            id: `vavoo_search_${c.id}`,
-            type: 'tv' as const,
-            name: `🔎 ${c.name}`,
-            extra: [{ name: 'search', isRequired: true }]
+            name: `TvVoo • UK • ${category.name}`,
+            extra: [{ name: 'skip', isRequired: false }]
         }))
     ],
     resources: ['catalog', 'meta', 'stream'],
@@ -1473,8 +1528,11 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
     try {
         console.log('[CATALOG] Request:', { id, type, extra: JSON.stringify(extra) });
         
-        // Handle standard TV catalogs, Home-enabled TV catalogs, and Search catalogs
-        let country = SUPPORTED_COUNTRIES.find(c => id === buildTvCatalogId(c.id));
+        // Handle the seven curated UK Discover categories, plus legacy/search IDs for compatibility.
+        const ukCategory = UK_DISCOVER_CATEGORIES.find(category => id === `${UK_DISCOVER_CATALOG_PREFIX}${category.id}`);
+        let country = ukCategory
+            ? SUPPORTED_COUNTRIES.find(c => c.id === 'uk')
+            : SUPPORTED_COUNTRIES.find(c => id === buildTvCatalogId(c.id));
         let isSearchCatalog = false;
         let isHomeCatalog = false;
         if (!country) {
@@ -1502,7 +1560,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
         // Do not return empty catalogs on initial Discover load.
         // If no genre/search is provided, return the full list for both legacy and home-enabled ids.
         // Use metas cache when possible
-        const countryKey = country.id;
+        const countryKey = ukCategory ? `${country.id}:${ukCategory.id}` : country.id;
         type MetasCacheEntry = { updatedAt: number; metas: any[] };
         (globalThis as any).__vavooMetasCache = (globalThis as any).__vavooMetasCache || {};
         const metasCache: Record<string, MetasCacheEntry> = (globalThis as any).__vavooMetasCache;
@@ -1529,8 +1587,13 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
             const hint = getResolvedHint(country.id, r.baseName);
             return !isBannedCategory(hint.cat);
         });
-        // Personal UK whitelist and ordering are applied after category exclusions.
+        // Personal UK whitelist and master ordering are applied after category exclusions.
         if (country.id === 'uk') rows = selectPersonalUkRows(rows);
+        // A category is a curated subset of the master list; filtering preserves its exact order.
+        if (ukCategory) {
+            const allowed = new Set<string>(ukCategory.channels.map(name => normalizeName(name)));
+            rows = rows.filter(r => allowed.has(normalizeName(r.baseName)));
+        }
         if (selectedGenre && !treatAsAll) {
             rows = rows.filter(r => {
                 const hint = getResolvedHint(country.id, r.baseName);
