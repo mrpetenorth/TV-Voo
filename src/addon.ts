@@ -182,8 +182,9 @@ function cleanupChannelName(name: string): string {
 }
 
 function displayChannelName(name: string): string {
-    // Keep the source stream selection unchanged, but show the channel's clean display name.
-    return cleanupChannelName(name).replace(/\s+\b(?:HD|UHD|4K)\b\s*$/i, '').trim();
+    // Keep source stream selection unchanged while standardising UK display names.
+    const cleaned = cleanupChannelName(name).replace(/\s+\b(?:HD|UHD|4K)\b\s*$/i, '').trim();
+    return cleaned.replace(/^TNT\s+SPORTS?\b/i, 'TNT SPORTS');
 }
 
 function normalizeName(s: string): string {
@@ -290,8 +291,22 @@ function selectPersonalUkRows<T extends { it: any; baseName: string }>(input: T[
         const key = normalizeName(wanted);
         const matches = input.filter(row => normalizeName(row.baseName) === key);
         if (!matches.length) continue;
-        const hdMatches = matches.filter(row => /\b(?:HD|UHD|4K)\b/i.test(String(row.it?.name || row.baseName)));
-        selected.push(...(hdMatches.length ? hdMatches : matches));
+        if (/^TNT SPORTS\b/i.test(wanted)) {
+            // Source feeds sometimes list both "TNT SPORT" and "TNT SPORTS" variants.
+            // Keep one channel entry and prefer the correctly-spelled source name, then HD/UHD/4K.
+            const ranked = [...matches].sort((a, b) => {
+                const canonicalA = /^TNT SPORTS\b/i.test(displayChannelName(a.baseName)) ? 1 : 0;
+                const canonicalB = /^TNT SPORTS\b/i.test(displayChannelName(b.baseName)) ? 1 : 0;
+                if (canonicalA !== canonicalB) return canonicalB - canonicalA;
+                const qualityA = /\b(?:HD|UHD|4K)\b/i.test(String(a.it?.name || a.baseName)) ? 1 : 0;
+                const qualityB = /\b(?:HD|UHD|4K)\b/i.test(String(b.it?.name || b.baseName)) ? 1 : 0;
+                return qualityB - qualityA;
+            });
+            selected.push(ranked[0]);
+        } else {
+            const hdMatches = matches.filter(row => /\b(?:HD|UHD|4K)\b/i.test(String(row.it?.name || row.baseName)));
+            selected.push(...(hdMatches.length ? hdMatches : matches));
+        }
     }
     return selected;
 }
@@ -681,6 +696,9 @@ function findStaticBest(countryId: string, baseName: string): StaticEntry | null
     if (!staticByCountry[countryId] || !staticByCountry[countryId].length) loadShardForCountry(countryId);
     const list = staticByCountry[countryId] || [];
     if (!list.length) return null;
+    // Prefer a normalised exact match before fuzzy matching (handles SPORT/SPORTS and RTÉ/RTE).
+    const exact = list.find(entry => normalizeName(entry.name || '') === normalizeName(baseName));
+    if (exact) return exact;
     let best = 0; let bestIdx = -1;
     for (let i = 0; i < list.length; i++) {
         const score = diceSimilarity(baseName, list[i].name || '');
