@@ -447,6 +447,11 @@ function getUkLogoPosterUrl(name: string, logoUrl?: string): string | undefined 
     return `https://tv-voo.onrender.com/uk-poster.svg?name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
 }
 
+function getUkHeroBackgroundUrl(name: string, logoUrl?: string): string | undefined {
+    if (!logoUrl || !/^https:\/\//i.test(logoUrl)) return undefined;
+    return `https://tv-voo.onrender.com/uk-poster.svg?mode=hero&name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
+}
+
 function getWorldCoverPortrait(name: string): string | undefined {
     // The current Channel 4/5 world-cover artwork is branded with +1.
     // Use the channel's normal logo with the designed fallback poster instead.
@@ -672,7 +677,9 @@ function getResolvedHint(countryId: string, baseName: string): ResolvedHint {
         bucket = readHints(countryId);
         resolvedHints[countryId] = bucket;
     }
-    if (bucket[key]) return bucket[key];
+    // Do not permanently reuse cached misses: channel artwork may have been added or
+    // corrected since the hints file was first written.
+    if (bucket[key]?.logo) return bucket[key];
     let logo: string | undefined;
     let cat: string | undefined;
     if (countryId === 'it') {
@@ -1736,14 +1743,16 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
             const metasDetailed = pagedGroups.map(({ baseName, items: groupItems }) => {
                 const hint = getResolvedHint(country.id, baseName);
                 const fallbackArt = fallbackPosterAbsUrl || TVVOO_FALLBACK_ABS;
-                const actualLogoArt = hint.logo || undefined;
+                const actualLogoArt = hint.logo || (country.id === 'uk' ? findStaticLogo(country.id, baseName) : undefined) || undefined;
                 const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
                 const posterArt = country.id === 'it'
                     ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
                     : getUkLogoPosterUrl(baseName, actualLogoArt) || getUkCustomPoster(baseName) || getWorldCoverPortrait(baseName) || fallbackArt;
                 const backgroundArt = country.id === 'it'
                     ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
-                    : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
+                    : country.id === 'uk'
+                        ? getUkHeroBackgroundUrl(baseName, actualLogoArt) || fallbackArt || undefined
+                        : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
                 const cat = hint.cat;
                 const channelId = `vavoo_${encodeURIComponent(baseName)}|group:${country.id}`;
 
@@ -1782,7 +1791,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
         const metas = pagedGroups.map(({ baseName, items: groupItems }) => {
             const hint = getResolvedHint(country.id, baseName);
             const fallbackArt = fallbackPosterAbsUrl || TVVOO_FALLBACK_ABS;
-            const actualLogoArt = hint.logo || undefined;
+            const actualLogoArt = hint.logo || (cid === 'uk' ? findStaticLogo(cid, baseName) : undefined) || undefined;
             const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
             const posterArt = country.id === 'it'
                 ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
@@ -1921,7 +1930,9 @@ builder.defineMetaHandler(async ({ type, id }: { type: string; id: string }) => 
                 : getWorldCoverPortrait(baseName) || fallbackArt;
         const background = cid === 'it'
             ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
-            : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
+            : cid === 'uk'
+                ? getUkHeroBackgroundUrl(baseName, actualLogoArt) || fallbackArt || undefined
+                : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
         // Try to enrich with EPG now/next only for Italy
         let nowTitle: string | undefined;
         let nowDesc: string | undefined;
@@ -2242,7 +2253,13 @@ app.get('/uk-poster.svg', (req: Request, res: Response) => {
     const rawName = String(req.query.name || 'TV');
     const name = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;').slice(0, 80);
     const safeLogo = logo.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="1200" viewBox="0 0 1200 1200"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#061b59"/><stop offset=".52" stop-color="#0759b9"/><stop offset="1" stop-color="#03245f"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="#1685e9" stop-opacity=".55"/><stop offset="1" stop-color="#1685e9" stop-opacity="0"/></radialGradient></defs><rect width="1200" height="1200" fill="url(#bg)"/><circle cx="900" cy="100" r="520" fill="url(#glow)"/><path d="M-80 820 Q300 760 600 620 T1280 410 L1280 1320 L-80 1320Z" fill="#0b3f91" opacity=".52"/><path d="M-80 930 Q320 880 650 730 T1280 550" fill="none" stroke="#4da5f6" stroke-width="5" opacity=".16"/><path d="M-80 1020 Q340 960 680 830 T1280 660" fill="none" stroke="#8bc7ff" stroke-width="3" opacity=".12"/><rect x="105" y="125" width="990" height="820" rx="54" fill="#061b59" opacity=".16" stroke="#8bc7ff" stroke-opacity=".18" stroke-width="3"/><image href="${safeLogo}" xlink:href="${safeLogo}" x="165" y="205" width="870" height="650" preserveAspectRatio="xMidYMid meet"/><text x="600" y="1080" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="600" letter-spacing="9" fill="#d6eaff" opacity=".76">${name.toUpperCase()}</text></svg>`;
+    const hero = String(req.query.mode || '') === 'hero';
+    const width = hero ? 1920 : 1200;
+    const height = hero ? 1080 : 1200;
+    const logoBox = hero
+        ? '<rect x="510" y="160" width="900" height="650" rx="48" fill="#061b59" opacity=".12" stroke="#8bc7ff" stroke-opacity=".18" stroke-width="3"/><image href="${safeLogo}" xlink:href="${safeLogo}" x="570" y="215" width="780" height="540" preserveAspectRatio="xMidYMid meet"/>'
+        : '<rect x="105" y="125" width="990" height="820" rx="54" fill="#061b59" opacity=".16" stroke="#8bc7ff" stroke-opacity=".18" stroke-width="3"/><image href="${safeLogo}" xlink:href="${safeLogo}" x="165" y="205" width="870" height="650" preserveAspectRatio="xMidYMid meet"/>';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#061b59"/><stop offset=".52" stop-color="#0759b9"/><stop offset="1" stop-color="#03245f"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="#1685e9" stop-opacity=".55"/><stop offset="1" stop-color="#1685e9" stop-opacity="0"/></radialGradient></defs><rect width="${width}" height="${height}" fill="url(#bg)"/><circle cx="${hero ? 1550 : 900}" cy="${hero ? 40 : 100}" r="${hero ? 600 : 520}" fill="url(#glow)"/><path d="M-80 ${hero ? 650 : 820} Q${hero ? 480 : 300} ${hero ? 580 : 760} ${hero ? 960 : 600} ${hero ? 420 : 620} T${width+80} ${hero ? 280 : 410} L${width+80} ${height+120} L-80 ${height+120}Z" fill="#0b3f91" opacity=".52"/><path d="M-80 ${hero ? 760 : 930} Q${hero ? 520 : 320} ${hero ? 700 : 880} ${hero ? 1050 : 650} ${hero ? 560 : 730} T${width+80} ${hero ? 430 : 550}" fill="none" stroke="#4da5f6" stroke-width="5" opacity=".16"/><path d="M-80 ${hero ? 850 : 1020} Q${hero ? 540 : 340} ${hero ? 790 : 960} ${hero ? 1100 : 680} ${hero ? 660 : 830} T${width+80} ${hero ? 540 : 660}" fill="none" stroke="#8bc7ff" stroke-width="3" opacity=".12"/>${logoBox}<text x="${width/2}" y="${hero ? 1000 : 1080}" text-anchor="middle" font-family="Arial,sans-serif" font-size="${hero ? 38 : 34}" font-weight="600" letter-spacing="9" fill="#d6eaff" opacity=".76">${name.toUpperCase()}</text></svg>`;
     res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     res.send(svg);
