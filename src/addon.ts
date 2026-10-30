@@ -441,6 +441,12 @@ function getUkCustomPoster(name: string): string | undefined {
     return UK_CUSTOM_POSTER_MAP[normalizeName(name)];
 }
 
+// Keep the exact existing channel logo and place it on the shared TvVoo artwork.
+function getUkLogoPosterUrl(name: string, logoUrl?: string): string | undefined {
+    if (!logoUrl || !/^https?:\\/\\//i.test(logoUrl)) return undefined;
+    return `https://tv-voo.onrender.com/uk-poster.svg?name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
+}
+
 function getWorldCoverPortrait(name: string): string | undefined {
     // The current Channel 4/5 world-cover artwork is branded with +1.
     // Use the channel's normal logo with the designed fallback poster instead.
@@ -1734,7 +1740,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
                 const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
                 const posterArt = country.id === 'it'
                     ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
-                    : getUkCustomPoster(baseName) || getWorldCoverPortrait(baseName) || fallbackArt;
+                    : getUkLogoPosterUrl(baseName, actualLogoArt) || getUkCustomPoster(baseName) || getWorldCoverPortrait(baseName) || fallbackArt;
                 const backgroundArt = country.id === 'it'
                     ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
                     : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
@@ -1780,7 +1786,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
             const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
             const posterArt = country.id === 'it'
                 ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
-                : getUkCustomPoster(baseName) || getWorldCoverPortrait(baseName) || fallbackArt;
+                : getUkLogoPosterUrl(baseName, actualLogoArt) || getUkCustomPoster(baseName) || getWorldCoverPortrait(baseName) || fallbackArt;
             const backgroundArt = country.id === 'it'
                 ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
                 : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
@@ -1910,7 +1916,9 @@ builder.defineMetaHandler(async ({ type, id }: { type: string; id: string }) => 
         const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
         const poster = cid === 'it'
             ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
-            : getWorldCoverPortrait(baseName) || fallbackArt;
+            : cid === 'uk'
+                ? getUkLogoPosterUrl(baseName, actualLogoArt) || getUkCustomPoster(baseName) || getWorldCoverPortrait(baseName) || fallbackArt
+                : getWorldCoverPortrait(baseName) || fallbackArt;
         const background = cid === 'it'
             ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
             : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
@@ -2225,6 +2233,20 @@ builder.defineStreamHandler(async ({ id }: { id: string }, req: any) => {
 const router = getRouter(builder.getInterface());
 const app = express();
 app.set('trust proxy', true);
+
+// Square UK artwork: retain the actual channel logo and place it on TvVoo's shared blue wave background.
+app.get('/uk-poster.svg', (req: Request, res: Response) => {
+    const rawLogo = String(req.query.logo || '');
+    const logo = /^https:\/\//i.test(rawLogo) ? rawLogo : '';
+    if (!logo) return res.status(400).type('text/plain').send('A valid HTTPS channel logo is required');
+    const rawName = String(req.query.name || 'TV');
+    const name = rawName.replace(/[&<>"']/g, (ch: string) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[ch] || ch)).slice(0, 80);
+    const safeLogo = logo.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="1200" viewBox="0 0 1200 1200"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#061b59"/><stop offset=".52" stop-color="#0759b9"/><stop offset="1" stop-color="#03245f"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="#1685e9" stop-opacity=".55"/><stop offset="1" stop-color="#1685e9" stop-opacity="0"/></radialGradient></defs><rect width="1200" height="1200" fill="url(#bg)"/><circle cx="900" cy="100" r="520" fill="url(#glow)"/><path d="M-80 820 Q300 760 600 620 T1280 410 L1280 1320 L-80 1320Z" fill="#0b3f91" opacity=".52"/><path d="M-80 930 Q320 880 650 730 T1280 550" fill="none" stroke="#4da5f6" stroke-width="5" opacity=".16"/><path d="M-80 1020 Q340 960 680 830 T1280 660" fill="none" stroke="#8bc7ff" stroke-width="3" opacity=".12"/><rect x="105" y="125" width="990" height="820" rx="54" fill="#061b59" opacity=".16" stroke="#8bc7ff" stroke-opacity=".18" stroke-width="3"/><image href="${safeLogo}" xlink:href="${safeLogo}" x="165" y="205" width="870" height="650" preserveAspectRatio="xMidYMid meet"/><text x="600" y="1080" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="600" letter-spacing="9" fill="#d6eaff" opacity=".76">${name.toUpperCase()}</text></svg>`;
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    res.send(svg);
+});
 
 // AsyncLocalStorage context for request-scoped host and url
 const requestContext = new AsyncLocalStorage<{ host: string; url: string }>();
