@@ -170,6 +170,10 @@ function cleanupChannelName(name: string): string {
 function displayChannelName(name: string): string {
     // Keep source stream selection unchanged while standardising UK display names.
     const cleaned = cleanupChannelName(name).replace(/\s+\b(?:HD|UHD|4K)\b\s*$/i, '').trim();
+    const key = normalizeName(cleaned);
+    if (key === 'itvbe') return 'ITV BE';
+    if (key === '5 usa') return '5USA';
+    if (key === 'disney xd') return 'DISNEY XD';
     return cleaned.replace(/^TNT\s+SPORTS?\b/i, 'TNT SPORTS');
 }
 
@@ -185,7 +189,11 @@ function normalizeName(s: string): string {
     // Common UK listing variations.
     return normalized
         .replace(/^itv be$/, 'itvbe')
-        .replace(/^5usa$/, '5 usa');
+        .replace(/^itv 1$/, 'itv1')
+        .replace(/^5usa$/, '5 usa')
+        // The source feed labels Disney XD as Disney+.
+        .replace(/^disney$/, 'disney xd')
+        .replace(/^hallmark channel$/, 'hallmark');
 }
 
 
@@ -266,7 +274,7 @@ const UK_PERSONAL_CHANNELS = [
     'BOOMERANG',
     'CARTOON NETWORK',
     'DISNEY CHANNEL',
-    'DISNEY',
+    'DISNEY XD',
     'GREAT! CHRISTMAS',
     'HALLMARK'
 ] as const;
@@ -330,7 +338,7 @@ const UK_DISCOVER_CATEGORIES = [
     {
         id: 'kids',
         name: 'Kids',
-        channels: ['BOOMERANG', 'CARTOON NETWORK', 'DISNEY CHANNEL', 'DISNEY']
+        channels: ['BOOMERANG', 'CARTOON NETWORK', 'DISNEY CHANNEL', 'DISNEY XD']
     }
 ] as const;
 
@@ -342,13 +350,13 @@ function selectPersonalUkRows<T extends { it: any; baseName: string }>(input: T[
         const key = normalizeName(wanted);
         const matches = input.filter(row => normalizeName(row.baseName) === key);
         if (!matches.length) continue;
-        if (/^TNT SPORTS\b/i.test(wanted)) {
-            // Source feeds sometimes list both "TNT SPORT" and "TNT SPORTS" variants.
-            // Keep one channel entry and prefer the correctly-spelled source name, then HD/UHD/4K.
+        if (/^TNT SPORTS\b/i.test(wanted) || ['ITV BE', '5USA', 'DISNEY XD'].includes(wanted)) {
+            // Collapse source aliases to one canonical channel entry.
+            // Prefer the requested spelling, then the best available stream quality.
             const ranked = [...matches].sort((a, b) => {
-                const canonicalA = /^TNT SPORTS\b/i.test(displayChannelName(a.baseName)) ? 1 : 0;
-                const canonicalB = /^TNT SPORTS\b/i.test(displayChannelName(b.baseName)) ? 1 : 0;
-                if (canonicalA !== canonicalB) return canonicalB - canonicalA;
+                const exactA = a.baseName.trim().toUpperCase() === wanted ? 1 : 0;
+                const exactB = b.baseName.trim().toUpperCase() === wanted ? 1 : 0;
+                if (exactA !== exactB) return exactB - exactA;
                 const qualityA = /\b(?:HD|UHD|4K)\b/i.test(String(a.it?.name || a.baseName)) ? 1 : 0;
                 const qualityB = /\b(?:HD|UHD|4K)\b/i.test(String(b.it?.name || b.baseName)) ? 1 : 0;
                 return qualityB - qualityA;
@@ -552,7 +560,7 @@ function findBestLogoAny(baseName: string): string | undefined {
 
 function categoriesOptionsForCountry(countryId: string): string[] {
     // UK genres are curated against the user's master channel list.
-    if (countryId === 'uk') return ['All Genres', ...UK_DISCOVER_CATEGORIES.map(category => category.name)];
+    if (countryId === 'uk') return UK_DISCOVER_CATEGORIES.map(category => category.name);
     // Italy uses categoriesMap (from M3U), others will use static list (loaded later)
     try {
         if (countryId === 'it') {
