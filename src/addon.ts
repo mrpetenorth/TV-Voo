@@ -184,6 +184,7 @@ function cleanupChannelName(name: string): string {
 function normalizeName(s: string): string {
     const normalized = (s || '')
         .toLowerCase()
+        .replace(/é/g, 'e')
         .replace(/\bhd\b|\buhd\b|\b4k\b|\btv\b|\bplus\b/g, ' ')
         .replace(/\bsports\b/g, 'sport')
         .replace(/[^a-z0-9]+/g, ' ')
