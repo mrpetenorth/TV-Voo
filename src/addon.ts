@@ -963,14 +963,22 @@ async function withCatalogFetchSlot<T>(fn: () => Promise<T>): Promise<T> {
 }
 async function getOrFetchCountryCatalog(cid: string): Promise<any[]> {
     try {
+        // UK source listings can change seasonally (for example, GREAT! Christmas).
+        // Refresh the UK catalogue periodically instead of keeping a permanent stale snapshot.
+        const ukRefreshMs = 6 * 60 * 60 * 1000;
         // 1) In-memory
         const mem = currentCache.countries[cid];
-        if (mem && Array.isArray(mem) && mem.length > 0) return mem;
-        // 2) Disk cache (permanent until restart; no TTL)
+        if (mem && Array.isArray(mem) && mem.length > 0) {
+            const memoryFresh = cid !== 'uk' || (currentCache.updatedAt > 0 && Date.now() - currentCache.updatedAt < ukRefreshMs);
+            if (memoryFresh) return mem;
+        }
+        // 2) Disk cache. Keep stale UK data as a fallback, but refresh it in the background of this request.
         const disk = readCountryCatalogFromDisk(cid);
         if (disk && Array.isArray(disk.items) && disk.items.length > 0) {
             currentCache.countries[cid] = disk.items;
-            return disk.items;
+            if (!mem || !mem.length) currentCache.updatedAt = disk.updatedAt || 0;
+            const diskFresh = cid !== 'uk' || (disk.updatedAt > 0 && Date.now() - disk.updatedAt < ukRefreshMs);
+            if (diskFresh) return disk.items;
         }
         // 2.5) If a fetch is already in-flight, await it
         if (Object.prototype.hasOwnProperty.call(inflightCatalogFetch, cid)) {
@@ -1015,7 +1023,8 @@ async function getOrFetchCountryCatalog(cid: string): Promise<any[]> {
             const isTruncated = cid === 'it' && slim.length < 350 && existingCount >= 350;
             if (slim.length > 0 && !isTruncated) {
                 currentCache.countries[cid] = slim;
-                writeCountryCatalogToDisk(cid, { updatedAt: Date.now(), items: slim });
+                currentCache.updatedAt = Date.now();
+                writeCountryCatalogToDisk(cid, { updatedAt: currentCache.updatedAt, items: slim });
                 if ((globalThis as any).__vavooMetasCache) {
                     delete (globalThis as any).__vavooMetasCache[cid];
                 }
