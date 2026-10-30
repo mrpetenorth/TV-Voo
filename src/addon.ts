@@ -191,6 +191,44 @@ function normalizeName(s: string): string {
         .trim();
 }
 
+
+// Personal UK catalogue: keep only the channels requested by the user, in their
+// chosen order. HD/SD suffixes are ignored for matching, then HD is preferred.
+const UK_PERSONAL_CHANNELS = [
+    'BBC ONE HD', 'BBC THREE', 'BBC FOUR', 'BLAZE', 'CHALLENGE',
+    'CHANNEL 4 HD', 'CHANNEL 5 HD', 'DAVE', 'DRAMA', 'CBS ACTION',
+    'CBS DRAMA', 'CBS JUSTICE', 'COMEDY CENTRAL', 'DISCOVERY CHANNEL',
+    'DISCOVERY HISTORY', 'DISCOVERY ID', 'DISCOVERY SCIENCE', 'BOOMERANG',
+    'CARTOON NETWORK HD', 'DISNEY XD', 'BBC NEWS', 'DISNEY CHANNEL',
+    'BOX NATION', 'E4', 'EDEN', 'GOLD HD', 'HISTORY 2 HD', 'HORRORXTRA',
+    'QUEST HD', 'QUEST RED HD', 'FILM4 HD', 'GREAT! CHRISTMAS', 'HALLMARK',
+    'HISTORY CHANNEL HD', 'ITV1 HD', 'ITV2 HD', 'ITV3 HD', 'ITV4 HD',
+    'ITVBE HD', 'MGM HD', 'MORE4 HD', 'SKY ATLANTIC HD', 'SKY CRIME HD',
+    'SKY DOCUMENTARIES HD', 'SKY HISTORY HD', 'SKY MAX HD', 'SKY MIX HD',
+    'SKY NATURE HD', 'MY5', 'MTV LIVE', 'SKY ARTS HD', 'PICK HD',
+    'RTÉ ONE', 'RTÉ TWO', 'SKY COMEDY HD', 'SKY FAMILY HD',
+    'SKY SCI-FI HORROR HD', 'SKY SPORTS ACTION', 'SKY SPORTS ARENA',
+    'SKY SPORTS FOOTBALL', 'SKY SPORTS GOLF', 'SKY SPORTS PREMIER LEAGUE',
+    'SKY SPORTS TENNIS', 'TNT SPORTS 1', 'TNT SPORTS 2', 'TNT SPORTS 3',
+    'TNT SPORTS 4', 'TNT SPORTS ULTIMATE', 'TNT SPORTS BOX OFFICE',
+    'PREMIER SPORTS 1', 'PREMIER SPORTS 2', 'SMITHSONIAN CHANNEL HD',
+    'PARLIAMENT', 'SKY SPORTS MAIN EVENT', 'TCM MOVIES', 'THATS TV GOLD',
+    'UNIVERSAL CHANNEL', 'WATCH', 'YESTERDAY', 'TNT SPORTS ESPN',
+    'UFC FIGHT NIGHT PASS', 'WWE HD'
+] as const;
+
+function selectPersonalUkRows<T extends { it: any; baseName: string }>(input: T[]): T[] {
+    const selected: T[] = [];
+    for (const wanted of UK_PERSONAL_CHANNELS) {
+        const key = normalizeName(wanted);
+        const matches = input.filter(row => normalizeName(row.baseName) === key);
+        if (!matches.length) continue;
+        const hdMatches = matches.filter(row => /\b(?:HD|UHD|4K)\b/i.test(String(row.it?.name || row.baseName)));
+        selected.push(...(hdMatches.length ? hdMatches : matches));
+    }
+    return selected;
+}
+
 function normalize(name: string): string {
     return name
         .toLowerCase()
@@ -1406,6 +1444,8 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
             const hint = getResolvedHint(country.id, r.baseName);
             return !isBannedCategory(hint.cat);
         });
+        // Personal UK whitelist and ordering are applied after category exclusions.
+        if (country.id === 'uk') rows = selectPersonalUkRows(rows);
         if (selectedGenre && !treatAsAll) {
             rows = rows.filter(r => {
                 const hint = getResolvedHint(country.id, r.baseName);
@@ -1473,8 +1513,8 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
             rows = scored.map(s => s.row);
             console.log('[CATALOG] Search results:', rows.length, '| top 3:', rows.slice(0, 3).map(r => r.baseName));
         }
-        // Ordinamento: se c'e ricerca, mantieni ordine per rilevanza; altrimenti priorita brand + A-Z
-        if (!searchQ) {
+        // Keep the user's requested UK sequence; retain the addon's normal sort elsewhere.
+        if (!searchQ && country.id !== 'uk') {
             const priorityOf = (name: string): number => {
                 const n = name.toLowerCase();
                 if (/\bsky\b/.test(n)) return 0;
