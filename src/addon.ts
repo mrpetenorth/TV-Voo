@@ -180,7 +180,7 @@ function displayChannelName(name: string): string {
 function normalizeName(s: string): string {
     const sourceName = (s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim();
     if (/^disney\s+channel(?:\s+hd)?$/.test(sourceName)) return 'disney channel';
-    if (/^disney\s*\\+(?:\s*xd)?(?:\s+hd)?$/.test(sourceName)) return 'disney xd';
+    if (/^disney\s*\+(?:\s*xd)?(?:\s+hd)?$/.test(sourceName)) return 'disney xd';
     const normalized = (s || '')
         .toLowerCase()
         .normalize('NFKD')
