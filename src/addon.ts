@@ -676,6 +676,7 @@ function shardPathCandidates(cid: string): string[] {
 // Cache resolved hints per country and baseName to avoid repeated fuzzy matching
 type ResolvedHint = { logo?: string; cat?: string };
 const UK_LOGO_OVERRIDES: Record<string, string> = {
+    'itv1': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/itv-1-uk.png',
     'itv2': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/itv-2-uk.png',
     'itv3': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/itv-3-uk.png',
     'film4': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/film-4-uk.png',
