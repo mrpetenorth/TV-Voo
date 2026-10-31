@@ -21,7 +21,7 @@ export class EPGService {
   this.fallbackTzFilter = opts.fallbackTimeZoneFilter;
     const cronSpec = opts.refreshCron || '0 */10 * * *'; // every 3 hours
     this.schedule = cron.schedule(cronSpec, () => {
-      this.refresh().catch(() => {});
+      this.refresh().catch((error: any) => console.error('[EPG] Scheduled refresh failed:', error?.message || error));
     }, { timezone: 'Europe/Rome' });
   }
 
@@ -161,6 +161,7 @@ export class EPGService {
       }
     }
     this.index = { byChannel, nowNext, channelNames, nameToIds, updatedAt: Date.now() };
+    console.log('[EPG] Refresh complete:', { sources: successfulSources, channels: Object.keys(byChannel).length, programmes: Object.values(byChannel).reduce((total, items) => total + items.length, 0) });
     if (failures.length) console.warn('[EPG] Some sources failed:', failures.join('; '));
   }
 
