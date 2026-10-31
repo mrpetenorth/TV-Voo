@@ -31,15 +31,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.GHCR }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,format=short
-
       - name: Build and push Docker image
         id: build-push
         uses: docker/build-push-action@v6
@@ -47,8 +38,9 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.GHCR }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.GHCR }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           provenance: false
 
       - name: Generate artifact attestation (GHCR)
