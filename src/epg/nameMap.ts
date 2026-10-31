@@ -2,6 +2,10 @@
 
 export function normalizeChannelName(raw: string): string {
   if (!raw) return '';
+  const sourceName = raw.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').trim();
+  // Keep Disney Channel distinct from Disney XD; do not collapse both to "disney".
+  if (/^disney\\s+channel(?:\\s+hd)?$/.test(sourceName)) return 'disney channel';
+  if (/^disney\\s*\\+(?:\\s*xd)?(?:\\s+hd)?$/.test(sourceName)) return 'disney xd';
   const normalized = raw
     .toLowerCase()
     .normalize('NFKD')
@@ -24,11 +28,10 @@ export function normalizeChannelName(raw: string): string {
     .replace(/^itv be$/, 'itvbe')
     .replace(/^itv ([234])$/, 'itv$1')
     .replace(/^film 4$/, 'film4')
-    .replace(/^u (dave|drama|gold|yesterday|watch)$/, '$1')
+    .replace(/^u (dave|drama|gold|yesterday|watch)$/, '$1')\n    .replace(/^u w$/, 'watch')\n    .replace(/^boxnation$/, 'box nation')\n    .replace(/^wwe network$/, 'wwe')
     .replace(/^rte ?1$/, 'rte one')
     .replace(/^rte ?2$/, 'rte two')
-    .replace(/^tnt sport espn$/, 'espn')
-    .replace(/^disney$/, 'disney xd');
+    .replace(/^tnt sport espn$/, 'espn');
 }
 
 // Base map: put hand-curated tricky cases here (can be extended at runtime)
