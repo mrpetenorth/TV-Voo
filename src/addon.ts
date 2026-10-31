@@ -79,7 +79,7 @@ const VAVOO_REFRESH_WHITELIST: Set<string> | null = (() => {
     return new Set(ids);
 })();
 // Default ON: boot refresh and daily schedule; can be disabled via env with =0
-const DO_BOOT_REFRESH = (process.env.VAVOO_BOOT_REFRESH || '1') !== '0';
+const DO_BOOT_REFRESH = (process.env.VAVOO_BOOT_REFRESH || '0') !== '0';
 const DO_SCHEDULE_REFRESH = (process.env.VAVOO_SCHEDULE_REFRESH || '1') !== '0';
 
 function vdbg(...args: any[]) { if (process.env.VAVOO_DEBUG !== '0') { try { console.log('[VAVOO]', ...args); } catch { } } }
