@@ -183,10 +183,7 @@ function normalizeName(s: string): string {
     if (/^disney\s+channel(?:\s+hd)?$/.test(sourceName)) return 'disney channel';
     if (/^disney\s*\+(?:\s*xd)?(?:\s+hd)?$/.test(sourceName)) return 'disney xd';
     if (/^sky sports\s*(?:\+|plus)$/.test(sourceName)) return 'sky sports arena';
-    const normalized = (s || '')
-        .toLowerCase()
-        .normalize('NFKD')
-        .replace(/[\u0300-\u036f]/g, '')
+    const normalized = sourceName
         // Keep time-shifted channels separate from their base channel.
         .replace(/\+\s*1\b/g, ' plusone ')
         .replace(/(?:'|’)/g, '')
@@ -210,7 +207,8 @@ function normalizeName(s: string): string {
         // UK feed aliases: some source labels insert a space into these channel names.
         .replace(/^itv ([234])$/, 'itv$1')
         .replace(/^film 4$/, 'film4')
-        .replace(/^rte ?1$/, 'rte one');
+        .replace(/^rte ?1$/, 'rte one')
+        .replace(/^rte ?2$/, 'rte two');
 }
 
 
@@ -275,7 +273,6 @@ const UK_PERSONAL_CHANNELS = [
     'DAVE',
     'BLAZE',
     'CHALLENGE',
-    'CBS DRAMA',
     'DRAMA',
     'GOLD',
     'YESTERDAY',
@@ -300,7 +297,6 @@ const UK_DISCOVER_CATEGORIES = [
             'SKY ATLANTIC', 'SKY ONE', 'SKY MIX',
             'RTÉ ONE', 'RTÉ TWO',
             'COMEDY CENTRAL', 'DAVE', 'BLAZE', 'CHALLENGE',
-            'CBS DRAMA',
             'DRAMA', 'WATCH', 'HALLMARK'
         ]
     },
