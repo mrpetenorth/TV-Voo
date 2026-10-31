@@ -2,11 +2,13 @@ import fetch from 'node-fetch';
 import sax, { SAXStream, QualifiedTag } from 'sax';
 import { DateTime } from 'luxon';
 import cron from 'node-cron';
+import { gunzipSync } from 'zlib';
 import { EPGIndex, EPGServiceOptions, Programme, StremioEpgVideo } from './types';
 import { normalizeChannelName } from './nameMap';
 
 export class EPGService {
   private url: string;
+  private additionalUrls: string[];
   private index: EPGIndex = { byChannel: {}, nowNext: {}, channelNames: {}, nameToIds: {}, updatedAt: 0 };
   private schedule?: any;
   private fallbackTz?: string;
@@ -14,6 +16,7 @@ export class EPGService {
 
   constructor(opts: EPGServiceOptions) {
   this.url = opts.url;
+  this.additionalUrls = opts.additionalUrls || [];
   this.fallbackTz = opts.fallbackTimeZone;
   this.fallbackTzFilter = opts.fallbackTimeZoneFilter;
     const cronSpec = opts.refreshCron || '0 */10 * * *'; // every 3 hours
@@ -91,11 +94,72 @@ export class EPGService {
   }
 
   public async refresh(): Promise<void> {
-    const res = await fetch(this.url, { timeout: 20000 } as any);
-    if (!res.ok) throw new Error(`EPG fetch failed: ${res.status}`);
-    const xml = await res.text();
-    this.index = this.parse(xml);
-    this.index.updatedAt = Date.now();
+    const urls = [this.url, ...this.additionalUrls].filter(Boolean);
+    const indexes: EPGIndex[] = [];
+    const failures: string[] = [];
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { timeout: 30000 } as any);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const bytes = Buffer.from(await res.arrayBuffer());
+        const xml = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b
+          ? gunzipSync(bytes).toString('utf8')
+          : bytes.toString('utf8');
+        indexes.push(this.parse(xml));
+      } catch (error: any) {
+        failures.push(`${url}: ${error?.message || error}`);
+      }
+    }
+    if (!indexes.length) throw new Error(`All EPG sources failed: ${failures.join('; ')}`);
+
+    // Combine independent guides. Keep all channel ids so a missing listing in one
+    // provider can be supplied by another without changing the stream catalogue.
+    const byChannel: Record<string, Programme[]> = {};
+    const channelNames: Record<string, string[]> = {};
+    for (const index of indexes) {
+      for (const [id, programmes] of Object.entries(index.byChannel)) {
+        (byChannel[id] ||= []).push(...programmes);
+      }
+      for (const [id, names] of Object.entries(index.channelNames)) {
+        const merged = channelNames[id] ||= [];
+        for (const name of names) if (!merged.includes(name)) merged.push(name);
+      }
+    }
+
+    const now = Date.now();
+    const nowNext: EPGIndex['nowNext'] = {};
+    for (const [id, programmes] of Object.entries(byChannel)) {
+      programmes.sort((a, b) => a.start - b.start);
+      const unique = new Map<number, Programme>();
+      for (const programme of programmes) {
+        if (!unique.has(programme.start)) unique.set(programme.start, programme);
+      }
+      byChannel[id] = Array.from(unique.values());
+      const arr = byChannel[id];
+      const currentIndex = arr.findIndex(p => now >= p.start && now < p.stop);
+      nowNext[id] = currentIndex >= 0
+        ? { now: arr[currentIndex], next: arr[currentIndex + 1] }
+        : { next: arr.find(p => p.start > now) };
+    }
+
+    const nameToIds: Record<string, string[]> = {};
+    const addId = (key: string, id: string) => {
+      if (!nameToIds[key]) nameToIds[key] = [];
+      if (!nameToIds[key].includes(id)) nameToIds[key].push(id);
+    };
+    for (const [id, names] of Object.entries(channelNames)) {
+      for (const name of names) {
+        const key = normalizeChannelName(name);
+        if (!key) continue;
+        addId(key, id);
+        // The open UK guide splits ITV1 by region (e.g. ITV1 Anglia).
+        // Include those regional feeds for the single ITV1 stream, but never +1.
+        const compact = key.replace(/\\s+/g, '');
+        if (/^itv1(?!plusone)[a-z]+$/.test(compact)) addId('itv1', id);
+      }
+    }
+    this.index = { byChannel, nowNext, channelNames, nameToIds, updatedAt: Date.now() };
+    if (failures.length) console.warn('[EPG] Some sources failed:', failures.join('; '));
   }
 
   private parse(xml: string): EPGIndex {
