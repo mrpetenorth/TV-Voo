@@ -678,7 +678,7 @@ const UK_LOGO_OVERRIDES: Record<string, string> = {
     'film4': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/film-4-uk.png',
     'sky max': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/sky-max-uk.png',
     'discovery id': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/investigation-discovery-uk.png',
-    'cbs action': 'https://upload.wikimedia.org/wikipedia/commons/9/98/CBS_action_RGB.png'
+    'cbs action': 'https://tv-voo.onrender.com/cbs-action-logo.svg'
 };
 function getUkLogoOverride(name: string): string | undefined {
     return UK_LOGO_OVERRIDES[normalizeName(name)];
@@ -2276,6 +2276,14 @@ builder.defineStreamHandler(async ({ id }: { id: string }, req: any) => {
 const router = getRouter(builder.getInterface());
 const app = express();
 app.set('trust proxy', true);
+
+// Serve CBS Action artwork directly from this service so clients do not depend on a third-party logo host.
+app.get('/cbs-action-logo.svg', (_req: Request, res: Response) => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360"><rect width="1200" height="360" fill="none"/><g fill="#fff"><circle cx="170" cy="180" r="112"/><circle cx="170" cy="180" r="82" fill="#071d55"/><circle cx="170" cy="180" r="57" fill="#fff"/><circle cx="170" cy="180" r="27" fill="#071d55"/><text x="325" y="205" font-family="Arial,Helvetica,sans-serif" font-size="166" font-weight="800" letter-spacing="-8">CBS</text><text x="750" y="205" font-family="Arial,Helvetica,sans-serif" font-size="118" font-weight="700" letter-spacing="1">ACTION</text></g></svg>`;
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+    res.send(svg);
+});
 
 // UK artwork: square posters include the channel logo; landscape backgrounds are clean TvVoo blue waves.
 app.get('/uk-poster.svg', async (req: Request, res: Response) => {
