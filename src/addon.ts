@@ -355,7 +355,7 @@ function selectPersonalUkRows<T extends { it: any; baseName: string }>(input: T[
         const key = normalizeName(wanted);
         const matches = input.filter(row => normalizeName(row.baseName) === key);
         if (!matches.length) continue;
-        if (/^TNT SPORTS\b/i.test(wanted) || ['ITV1', 'ITV2', 'ITV3', 'ITV4', 'ITV BE', '5USA'].includes(wanted)) {
+        if (/^TNT SPORTS\b/i.test(wanted) || ['ITV1', 'ITV2', 'ITV3', 'ITV4', 'ITV BE', '5USA', 'RTÉ ONE', 'RTÉ TWO'].includes(wanted)) {
             // Collapse source aliases to one canonical channel entry.
             // Prefer the requested spelling, then the best available stream quality.
             const ranked = [...matches].sort((a, b) => {
@@ -366,7 +366,7 @@ function selectPersonalUkRows<T extends { it: any; baseName: string }>(input: T[
                 const qualityB = /\b(?:HD|UHD|4K)\b/i.test(String(b.it?.name || b.baseName)) ? 1 : 0;
                 return qualityB - qualityA;
             });
-            selected.push(wanted === 'ITV1' ? { ...ranked[0], baseName: 'ITV1' } : ranked[0]);
+            selected.push(['ITV1', 'RTÉ ONE', 'RTÉ TWO'].includes(wanted) ? { ...ranked[0], baseName: wanted } : ranked[0]);
         } else {
             const hdMatches = matches.filter(row => /\b(?:HD|UHD|4K)\b/i.test(String(row.it?.name || row.baseName)));
             selected.push(...(hdMatches.length ? hdMatches : matches));
@@ -681,7 +681,9 @@ const UK_LOGO_OVERRIDES: Record<string, string> = {
     'film4': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/film-4-uk.png',
     'sky max': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/sky-max-uk.png',
     'discovery id': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/investigation-discovery-uk.png',
-    'watch': 'https://www.tvlogo.org/united-kingdom/u-plus-w.png'
+    'watch': 'https://www.tvlogo.org/united-kingdom/u-plus-w.png',
+    'rte one': 'https://www.tvlogo.org/united-kingdom/rte-one-uk.png',
+    'rte two': 'https://www.tvlogo.org/united-kingdom/rte-2-uk.png'
 };
 function getUkLogoOverride(name: string): string | undefined {
     return UK_LOGO_OVERRIDES[normalizeName(name)];
