@@ -1284,6 +1284,12 @@ async function vavooCatalog(group: string, signature: string): Promise<any[] | n
             return null;
         }
     } while (cursor);
+    if (group === 'United Kingdom') {
+        const candidates = out
+            .map((item: any) => String(item?.name || ''))
+            .filter((name: string) => /great|christmas|hallmark/i.test(name));
+        vdbg('[CATALOG] UK holiday-channel source candidates', candidates);
+    }
     return out;
 }
 
