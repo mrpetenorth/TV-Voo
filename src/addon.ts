@@ -450,9 +450,8 @@ function getUkLogoPosterUrl(name: string, logoUrl?: string): string | undefined 
     return `https://tv-voo.onrender.com/uk-poster.svg?name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
 }
 
-function getUkHeroBackgroundUrl(name: string, logoUrl?: string): string | undefined {
-    if (!logoUrl || !/^https:\/\//i.test(logoUrl)) return undefined;
-    return `https://tv-voo.onrender.com/uk-poster.svg?mode=hero&name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
+function getUkHeroBackgroundUrl(): string {
+    return 'https://tv-voo.onrender.com/uk-poster.svg?mode=hero';
 }
 
 function getWorldCoverPortrait(name: string): string | undefined {
@@ -1828,7 +1827,9 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
                 : getUkLogoPosterUrl(baseName, actualLogoArt) || getUkCustomPoster(baseName) || getWorldCoverPortrait(baseName) || fallbackArt;
             const backgroundArt = country.id === 'it'
                 ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
-                : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
+                : country.id === 'uk'
+                    ? getUkHeroBackgroundUrl()
+                    : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
             const cat = hint.cat;
             // EPG (Italy only)
             let description: string | undefined = undefined;
@@ -2275,21 +2276,37 @@ const router = getRouter(builder.getInterface());
 const app = express();
 app.set('trust proxy', true);
 
-// Square UK artwork: retain the actual channel logo and place it on TvVoo's shared blue wave background.
-app.get('/uk-poster.svg', (req: Request, res: Response) => {
+// UK artwork: square posters include the channel logo; landscape backgrounds are clean TvVoo blue waves.
+app.get('/uk-poster.svg', async (req: Request, res: Response) => {
+    const hero = String(req.query.mode || '') === 'hero';
     const rawLogo = String(req.query.logo || '');
     const logo = /^https:\/\//i.test(rawLogo) ? rawLogo : '';
-    if (!logo) return res.status(400).type('text/plain').send('A valid HTTPS channel logo is required');
-    const rawName = String(req.query.name || 'TV');
-    const name = rawName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;').slice(0, 80);
-    const safeLogo = logo.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const hero = String(req.query.mode || '') === 'hero';
+    if (!hero && !logo) return res.status(400).type('text/plain').send('A valid HTTPS channel logo is required');
+
+    let embeddedLogo = '';
+    if (!hero && logo) {
+        try {
+            const logoResponse = await fetch(logo, { headers: { 'User-Agent': 'Mozilla/5.0 TvVoo artwork' }, timeout: 8000 } as any);
+            if (logoResponse.ok) {
+                const contentType = String(logoResponse.headers.get('content-type') || 'image/png').split(';')[0].trim().toLowerCase();
+                const allowed = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'];
+                const bytes = Buffer.from(await logoResponse.arrayBuffer());
+                if (allowed.includes(contentType) && bytes.length > 0 && bytes.length <= 3 * 1024 * 1024) {
+                    embeddedLogo = `data:${contentType};base64,${bytes.toString('base64')}`;
+                }
+            }
+        } catch (e: any) {
+            vdbg('[ART] Could not inline UK channel logo', e?.message || e);
+        }
+    }
+
     const width = hero ? 1920 : 1200;
     const height = hero ? 1080 : 1200;
-    const logoBox = hero
-        ? `<rect x="510" y="160" width="900" height="650" rx="48" fill="#061b59" opacity=".12" stroke="#8bc7ff" stroke-opacity=".18" stroke-width="3"/><image href="${safeLogo}" xlink:href="${safeLogo}" x="570" y="215" width="780" height="540" preserveAspectRatio="xMidYMid meet"/>`
-        : `<rect x="105" y="125" width="990" height="820" rx="54" fill="#061b59" opacity=".16" stroke="#8bc7ff" stroke-opacity=".18" stroke-width="3"/><image href="${safeLogo}" xlink:href="${safeLogo}" x="165" y="205" width="870" height="650" preserveAspectRatio="xMidYMid meet"/>`;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#061b59"/><stop offset=".52" stop-color="#0759b9"/><stop offset="1" stop-color="#03245f"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="#1685e9" stop-opacity=".55"/><stop offset="1" stop-color="#1685e9" stop-opacity="0"/></radialGradient></defs><rect width="${width}" height="${height}" fill="url(#bg)"/><circle cx="${hero ? 1550 : 900}" cy="${hero ? 40 : 100}" r="${hero ? 600 : 520}" fill="url(#glow)"/><path d="M-80 ${hero ? 650 : 820} Q${hero ? 480 : 300} ${hero ? 580 : 760} ${hero ? 960 : 600} ${hero ? 420 : 620} T${width+80} ${hero ? 280 : 410} L${width+80} ${height+120} L-80 ${height+120}Z" fill="#0b3f91" opacity=".52"/><path d="M-80 ${hero ? 760 : 930} Q${hero ? 520 : 320} ${hero ? 700 : 880} ${hero ? 1050 : 650} ${hero ? 560 : 730} T${width+80} ${hero ? 430 : 550}" fill="none" stroke="#4da5f6" stroke-width="5" opacity=".16"/><path d="M-80 ${hero ? 850 : 1020} Q${hero ? 540 : 340} ${hero ? 790 : 960} ${hero ? 1100 : 680} ${hero ? 660 : 830} T${width+80} ${hero ? 540 : 660}" fill="none" stroke="#8bc7ff" stroke-width="3" opacity=".12"/>${logoBox}<text x="${width/2}" y="${hero ? 1000 : 1080}" text-anchor="middle" font-family="Arial,sans-serif" font-size="${hero ? 38 : 34}" font-weight="600" letter-spacing="9" fill="#d6eaff" opacity=".76">${name.toUpperCase()}</text></svg>`;
+    const safeLogo = embeddedLogo.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const logoBox = !hero && safeLogo
+        ? `<image href="${safeLogo}" xlink:href="${safeLogo}" x="165" y="205" width="870" height="790" preserveAspectRatio="xMidYMid meet"/>`
+        : '';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#061b59"/><stop offset=".52" stop-color="#0759b9"/><stop offset="1" stop-color="#03245f"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="#1685e9" stop-opacity=".55"/><stop offset="1" stop-color="#1685e9" stop-opacity="0"/></radialGradient></defs><rect width="${width}" height="${height}" fill="url(#bg)"/><circle cx="${hero ? 1550 : 900}" cy="${hero ? 40 : 100}" r="${hero ? 600 : 520}" fill="url(#glow)"/><path d="M-80 ${hero ? 650 : 820} Q${hero ? 480 : 300} ${hero ? 580 : 760} ${hero ? 960 : 600} ${hero ? 420 : 620} T${width+80} ${hero ? 280 : 410} L${width+80} ${height+120} L-80 ${height+120}Z" fill="#0b3f91" opacity=".52"/><path d="M-80 ${hero ? 760 : 930} Q${hero ? 520 : 320} ${hero ? 700 : 880} ${hero ? 1050 : 650} ${hero ? 560 : 730} T${width+80} ${hero ? 430 : 550}" fill="none" stroke="#4da5f6" stroke-width="5" opacity=".16"/><path d="M-80 ${hero ? 850 : 1020} Q${hero ? 540 : 340} ${hero ? 790 : 960} ${hero ? 1100 : 680} ${hero ? 660 : 830} T${width+80} ${hero ? 540 : 660}" fill="none" stroke="#8bc7ff" stroke-width="3" opacity=".12"/>${logoBox}</svg>`;
     res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     res.send(svg);
