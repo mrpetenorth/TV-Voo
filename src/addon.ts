@@ -353,7 +353,7 @@ function selectPersonalUkRows<T extends { it: any; baseName: string }>(input: T[
         const key = normalizeName(wanted);
         const matches = input.filter(row => normalizeName(row.baseName) === key);
         if (!matches.length) continue;
-        if (/^TNT SPORTS\b/i.test(wanted) || ['ITV1', 'ITV BE', '5USA', 'DISNEY XD'].includes(wanted)) {
+        if (/^TNT SPORTS\b/i.test(wanted) || ['ITV1', 'ITV2', 'ITV3', 'ITV4', 'ITV BE', '5USA', 'DISNEY XD'].includes(wanted)) {
             // Collapse source aliases to one canonical channel entry.
             // Prefer the requested spelling, then the best available stream quality.
             const ranked = [...matches].sort((a, b) => {
