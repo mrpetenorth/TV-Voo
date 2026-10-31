@@ -150,7 +150,8 @@ function writeMapToDisk(file: string, map: Record<string, string>): void {
 }
 
 const COVER_MAPS = readCoverMapsFromDisk();
-const COVERS_PORTRAIT_MAP: Record<string, string> = COVER_MAPS.ita_portrait_map || {};
+// UK artwork only needs the shared world fallback maps; do not retain Italy-only cover data.
+const COVERS_PORTRAIT_MAP: Record<string, string> = {};
 const COVERS_WORLD_MAP: Record<string, string> = COVER_MAPS.world_portrait_map || {};
 const COVERS_LANDSCAPE_MAP: Record<string, string> = COVER_MAPS.landscape_map || {};
 
@@ -2986,112 +2987,25 @@ currentCache = readCacheFromDisk();
 if (currentCache.updatedAt) {
     vdbg('Cache loaded from disk at', new Date(currentCache.updatedAt).toISOString());
 }
-logosMap = readLogosFromDisk();
+logosMap = Object.fromEntries(Object.entries(readLogosFromDisk()).filter(([key]) => key.startsWith('uk:')));
 if (Object.keys(logosMap).length) {
     vdbg('Logos map loaded with', Object.keys(logosMap).length, 'entries');
 }
-categoriesMap = readCategoriesFromDisk();
+categoriesMap = Object.fromEntries(Object.entries(readCategoriesFromDisk()).filter(([key]) => key.startsWith('uk:')));
 if (Object.keys(categoriesMap).length) {
     vdbg('Categories map loaded with', Object.keys(categoriesMap).length, 'entries');
 }
-italyCoverPortraitMap = readItalyCoverMapFromDisk(ITALY_COVER_PORTRAIT_FILE);
+italyCoverPortraitMap = {};
 if (Object.keys(italyCoverPortraitMap).length) {
     vdbg('Italy portrait cover map loaded with', Object.keys(italyCoverPortraitMap).length, 'entries');
 }
-italyCoverLandscapeMap = readItalyCoverMapFromDisk(ITALY_COVER_LANDSCAPE_FILE);
+italyCoverLandscapeMap = {};
 if (Object.keys(italyCoverLandscapeMap).length) {
     vdbg('Italy landscape cover map loaded with', Object.keys(italyCoverLandscapeMap).length, 'entries');
 }
-// Load static non-Italy channels list (logos & categories)
-loadStaticChannels();
+// UK channels use the curated master list; skip loading unrelated country shards.
 
-// Normalize Italy logos/categories keys at startup to drop only parenthetical variants
-try {
-    let migrated = 0;
-    const fixKey = (k: string) => k.replace(/^it:(.*)$/i, (_m, name) => `it:${cleanupChannelName(String(name))}`);
-    // logosMap
-    const newLogos: Record<string, string> = {};
-    for (const [k, v] of Object.entries(logosMap)) {
-        const nk = fixKey(k);
-        if (nk !== k) migrated++;
-        if (!newLogos[nk]) newLogos[nk] = v as string;
-    }
-    logosMap = newLogos;
-    // categoriesMap
-    const newCats: Record<string, string> = {};
-    for (const [k, v] of Object.entries(categoriesMap)) {
-        const nk = fixKey(k);
-        if (nk !== k) migrated++;
-        if (!newCats[nk]) newCats[nk] = v as string;
-    }
-    categoriesMap = newCats;
-    if (migrated > 0) {
-        try { fs.writeFileSync(LOGOS_FILE, JSON.stringify(logosMap, null, 2), 'utf8'); } catch { }
-        try { fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(categoriesMap, null, 2), 'utf8'); } catch { }
-        vdbg('Normalized Italy logos/categories keys:', migrated);
-    }
-} catch { }
-
-// One-time migration: normalize Italy keys by removing trailing numbering so matching works (e.g., "italia 1 (1)" -> "italia 1")
-try {
-    let changed = 0;
-    const normalizeKey = (k: string) => {
-        if (!k.startsWith('it:')) return k;
-        const rhs = k.slice(3);
-        const norm = cleanupChannelName(rhs).toLowerCase();
-        return `it:${norm}`;
-    };
-    const newLogos: Record<string, string> = {};
-    for (const [k, v] of Object.entries(logosMap)) {
-        const nk = normalizeKey(k);
-        if (!newLogos[nk]) newLogos[nk] = v; // prefer first
-        if (nk !== k) changed++;
-    }
-    const newCats: Record<string, string> = {};
-    for (const [k, v] of Object.entries(categoriesMap)) {
-        const nk = normalizeKey(k);
-        if (!newCats[nk]) newCats[nk] = v;
-        if (nk !== k) changed++;
-    }
-    if (changed) {
-        logosMap = newLogos;
-        categoriesMap = newCats;
-        try { fs.writeFileSync(LOGOS_FILE, JSON.stringify(logosMap, null, 2), 'utf8'); } catch { }
-        try { fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(categoriesMap, null, 2), 'utf8'); } catch { }
-        vdbg('Migrated Italy logos/categories keys to normalized form', { changed });
-    }
-} catch { }
-
-// Normalize Italy cover map keys so variant suffixes reuse the same artwork.
-try {
-    const normalizeItalyMap = (map: Record<string, string>) => {
-        let changed = 0;
-        const next: Record<string, string> = {};
-        for (const [key, value] of Object.entries(map)) {
-            const normalized = key.startsWith('it:') ? `it:${cleanupChannelName(key.slice(3)).toLowerCase()}` : key;
-            if (!next[normalized]) next[normalized] = value;
-            if (normalized !== key) changed++;
-        }
-        return { changed, map: next };
-    };
-    const portrait = normalizeItalyMap(italyCoverPortraitMap);
-    const landscape = normalizeItalyMap(italyCoverLandscapeMap);
-    italyCoverPortraitMap = portrait.map;
-    italyCoverLandscapeMap = landscape.map;
-    if (portrait.changed > 0) writeMapToDisk(ITALY_COVER_PORTRAIT_FILE, italyCoverPortraitMap);
-    if (landscape.changed > 0) writeMapToDisk(ITALY_COVER_LANDSCAPE_FILE, italyCoverLandscapeMap);
-} catch { }
-
-// If Italy categories or covers are missing at boot, trigger a one-off background update from M3U
-try {
-    const hasItalyCats = Object.keys(categoriesMap).some(k => k.startsWith('it:'));
-    const hasItalyPortrait = Object.keys(italyCoverPortraitMap).some(k => k.startsWith('it:'));
-    const hasItalyLandscape = Object.keys(italyCoverLandscapeMap).some(k => k.startsWith('it:'));
-    if (!hasItalyCats || !hasItalyPortrait || !hasItalyLandscape) {
-        vdbg('Italy artwork metadata missing at startup; updating from M3U…');
-        (async () => { try { await updateLogosFromM3U(); vdbg('Italy categories populated at startup'); } catch { } })();
-    }
-} catch { }
+// UK-only mode: no Italy M3U artwork bootstrap or international metadata migration.
 let refreshing = false;
 async function updateLogosFromM3U(): Promise<number> {
     // Italy logos/categories/covers source, bundled in the repo (src/channels/lista-it.m3u)
@@ -3255,8 +3169,6 @@ async function refreshDailyCache() {
             writeCacheToDisk(currentCache);
             vdbg('Cache refresh complete at', new Date(currentCache.updatedAt).toISOString());
         }
-        // After refreshing catalogs, enrich Italy logos/categories from M3U only (non-Italy uses static lists)
-        await updateLogosFromM3U();
     } catch (e) {
         console.error('Cache refresh failed:', e);
     } finally {
