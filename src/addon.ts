@@ -178,6 +178,9 @@ function displayChannelName(name: string): string {
 }
 
 function normalizeName(s: string): string {
+    const sourceName = (s || '').toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').trim();
+    if (/^disney\\s+channel(?:\\s+hd)?$/.test(sourceName)) return 'disney channel';
+    if (/^disney\\s*\\+(?:\\s*xd)?(?:\\s+hd)?$/.test(sourceName)) return 'disney xd';
     const normalized = (s || '')
         .toLowerCase()
         .normalize('NFKD')
@@ -192,12 +195,10 @@ function normalizeName(s: string): string {
         .trim();
     // Common UK listing variations.
     return normalized
-        .replace(/^u (dave|drama|gold|yesterday|watch)$/, '$1')
+        .replace(/^u (dave|drama|gold|yesterday|watch)$/, '$1')\n        .replace(/^u w$/, 'watch')\n        .replace(/^boxnation$/, 'box nation')\n        .replace(/^wwe network$/, 'wwe')
         .replace(/^itv be$/, 'itvbe')
         .replace(/^itv 1$/, 'itv1')
         .replace(/^5usa$/, '5 usa')
-        // The source feed labels Disney XD as Disney+.
-        .replace(/^disney$/, 'disney xd')
         .replace(/^hallmark channel$/, 'hallmark')
         // UK feed aliases: some source labels insert a space into these channel names.
         .replace(/^itv ([234])$/, 'itv$1')
@@ -451,7 +452,7 @@ function getUkCustomPoster(name: string): string | undefined {
 function getUkLogoPosterUrl(name: string, logoUrl?: string): string | undefined {
     if (!logoUrl || !/^https:\/\//i.test(logoUrl)) return undefined;
     // Bump the artwork URL so Nuvio/Android TV discards previously cached logo-less tiles.
-    return `https://tv-voo.onrender.com/uk-poster.svg?v=3&name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
+    return `https://tv-voo.onrender.com/uk-poster.svg?v=4&name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
 }
 
 function getUkHeroBackgroundUrl(): string {
@@ -1579,6 +1580,7 @@ if (VAVOO_DISABLE_EPG) {
     const epgUrl = process.env.EPG_URL || 'https://www.open-epg.com/files/unitedkingdom.xml';
     epg = new EPGService({
         url: epgUrl,
+        additionalUrls: process.env.EPG_EXTRA_URLS ? process.env.EPG_EXTRA_URLS.split(',').map((url: string) => url.trim()).filter(Boolean) : ['https://raw.githubusercontent.com/acidjesuz/EPGTalk/master/UK_guide.xml.gz'],
         refreshCron: '0 */10 * * *',
         fallbackTimeZone: 'Europe/Rome',
         // Apply fallback TZ to channels that look Italian (tvg-id commonly ends with .it or contains .it.)
