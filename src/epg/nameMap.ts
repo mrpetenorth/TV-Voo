@@ -32,6 +32,7 @@ export function normalizeChannelName(raw: string): string {
     .replace(/^u w$/, 'watch')
     .replace(/^boxnation$/, 'box nation')
     .replace(/^wwe network$/, 'wwe')
+    .replace(/^investigation discovery$/, 'discovery id')
     .replace(/^rte ?1$/, 'rte one')
     .replace(/^rte ?2$/, 'rte two')
     .replace(/^tnt sport espn$/, 'espn');
