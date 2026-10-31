@@ -1569,7 +1569,7 @@ if (VAVOO_DISABLE_EPG) {
     vdbg('EPG disabled via env');
     epg = { refresh: async () => { }, getIndex: () => ({ updatedAt: 0, byChannel: {}, nameToIds: {}, nowNext: {} }) };
 } else {
-    const epgUrl = process.env.EPG_URL || 'https://raw.githubusercontent.com/qwertyuiop8899/TV/refs/heads/main/epg.xml';
+    const epgUrl = process.env.EPG_URL || 'https://www.open-epg.com/files/unitedkingdom.xml.gz';
     epg = new EPGService({
         url: epgUrl,
         refreshCron: '0 */10 * * *',
