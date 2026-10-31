@@ -2,7 +2,8 @@ import fetch from 'node-fetch';
 import sax, { SAXStream, QualifiedTag } from 'sax';
 import { DateTime } from 'luxon';
 import cron from 'node-cron';
-import { gunzipSync } from 'zlib';
+import { Readable } from 'stream';
+import { createGunzip } from 'zlib';
 import { EPGIndex, EPGServiceOptions, Programme, StremioEpgVideo } from './types';
 import { normalizeChannelName } from './nameMap';
 
@@ -107,23 +108,18 @@ export class EPGService {
       try {
         const res = await fetch(url, { timeout: 30000 } as any);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const bytes = Buffer.from(await res.arrayBuffer());
-        let xml = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b
-          ? gunzipSync(bytes).toString('utf8')
-          : bytes.toString('utf8');
-        // Some XMLTV hosts prepend/append non-XML text (for example a
-        // proxy/banner response). Keep only the actual XMLTV document.
-        const rootStart = xml.search(/<tv(?:\s|>)/i);
-        const rootEnd = xml.toLowerCase().lastIndexOf('</tv>');
-        if (rootStart < 0 || rootEnd < rootStart) {
-          throw new Error(`Response does not contain an XMLTV <tv> document (starts: ${xml.slice(0, 160).replace(/\s+/g, ' ')})`);
-        }
-        xml = xml.slice(rootStart, rootEnd + 5);
-        const index = this.parse(xml);
+        // Parse the response as a stream. Buffering the compressed download,
+        // expanded XML string and parsed index simultaneously can exceed the
+        // 512 MB Render instance limit for a full XMLTV guide.
+        const contentType = res.headers.get('content-type') || '';
+        const isGzip = url.toLowerCase().includes('.gz') || /gzip/i.test(contentType);
+        const source = isGzip ? res.body.pipe(createGunzip()) : res.body;
+        const index = await this.parseStream(source);
         successfulSources++;
 
         for (const [id, programmes] of Object.entries(index.byChannel)) {
-          (byChannel[id] ||= []).push(...programmes);
+          const target = byChannel[id] ||= [];
+          for (const programme of programmes) target.push(programme);
         }
         for (const [id, names] of Object.entries(index.channelNames)) {
           const merged = channelNames[id] ||= [];
@@ -171,6 +167,67 @@ export class EPGService {
     this.index = { byChannel, nowNext, channelNames, nameToIds, updatedAt: Date.now() };
     console.log('[EPG] Refresh complete:', { sources: successfulSources, channels: Object.keys(byChannel).length, programmes: Object.values(byChannel).reduce((total, items) => total + items.length, 0) });
     if (failures.length) console.warn('[EPG] Some sources failed:', failures.join('; '));
+  }
+
+  private parseStream(source: Readable): Promise<EPGIndex> {
+    return new Promise((resolve, reject) => {
+      const parser = sax.createStream(true, { trim: true, lowercase: true });
+      const byChannel: Record<string, Programme[]> = {};
+      const channelNames: Record<string, string[]> = {};
+      let curProg: Partial<Programme> | null = null;
+      let curText = '';
+      let inChannel = false;
+      let curChannelId: string | null = null;
+      let sawTvRoot = false;
+
+      parser.on('opentag', (node: any) => {
+        if (node.name === 'tv') sawTvRoot = true;
+        if (node.name === 'programme') {
+          const ch = String(node.attributes?.channel || '');
+          curProg = {
+            channel: ch,
+            start: this.xmltvToMs(String(node.attributes?.start || ''), ch),
+            stop: this.xmltvToMs(String(node.attributes?.stop || ''), ch),
+          };
+        } else if (node.name === 'channel') {
+          inChannel = true;
+          curChannelId = String(node.attributes?.id || '');
+          if (curChannelId && !channelNames[curChannelId]) channelNames[curChannelId] = [];
+        }
+        curText = '';
+      });
+      parser.on('text', (value: string) => { curText += value; });
+      parser.on('cdata', (value: string) => { curText += value; });
+      parser.on('closetag', (name: string) => {
+        const tag = String(name).toLowerCase();
+        if (tag === 'title' && curProg) curProg.title = curText.trim();
+        else if (tag === 'desc' && curProg) curProg.desc = curText.trim();
+        else if (tag === 'display-name' && inChannel && curChannelId) {
+          const value = curText.trim();
+          if (value) channelNames[curChannelId].push(value);
+        } else if (tag === 'channel') {
+          inChannel = false;
+          curChannelId = null;
+        } else if (tag === 'programme') {
+          if (curProg && typeof curProg.start === 'number' && typeof curProg.stop === 'number' && curProg.channel) {
+            const programme = curProg as Programme;
+            (byChannel[programme.channel] ||= []).push(programme);
+          }
+          curProg = null;
+        }
+        curText = '';
+      });
+      parser.on('error', reject);
+      source.on('error', reject);
+      parser.on('end', () => {
+        if (!sawTvRoot) {
+          reject(new Error('Response does not contain an XMLTV <tv> document'));
+          return;
+        }
+        resolve({ byChannel, channelNames, nowNext: {}, nameToIds: {}, updatedAt: Date.now() });
+      });
+      source.pipe(parser);
+    });
   }
 
   private parse(xml: string): EPGIndex {
