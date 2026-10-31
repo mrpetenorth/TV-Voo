@@ -5,7 +5,7 @@ export function normalizeChannelName(raw: string): string {
   const sourceName = raw.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim();
   // Keep Disney Channel distinct from Disney XD; do not collapse both to "disney".
   if (/^disney\s+channel(?:\s+hd)?$/.test(sourceName)) return 'disney channel';
-  if (/^disney\s*\\+(?:\s*xd)?(?:\s+hd)?$/.test(sourceName)) return 'disney xd';
+  if (/^disney\s*\+(?:\s*xd)?(?:\s+hd)?$/.test(sourceName)) return 'disney xd';
   const normalized = raw
     .toLowerCase()
     .normalize('NFKD')
