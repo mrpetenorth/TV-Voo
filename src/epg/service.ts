@@ -113,10 +113,10 @@ export class EPGService {
           : bytes.toString('utf8');
         // Some XMLTV hosts prepend/append non-XML text (for example a
         // proxy/banner response). Keep only the actual XMLTV document.
-        const rootStart = xml.search(/<tv(?:\\s|>)/i);
+        const rootStart = xml.search(/<tv(?:\s|>)/i);
         const rootEnd = xml.toLowerCase().lastIndexOf('</tv>');
         if (rootStart < 0 || rootEnd < rootStart) {
-          throw new Error(`Response does not contain an XMLTV <tv> document (starts: ${xml.slice(0, 160).replace(/\\s+/g, ' ')})`);
+          throw new Error(`Response does not contain an XMLTV <tv> document (starts: ${xml.slice(0, 160).replace(/\s+/g, ' ')})`);
         }
         xml = xml.slice(rootStart, rootEnd + 5);
         const index = this.parse(xml);
@@ -164,7 +164,7 @@ export class EPGService {
         addId(key, id);
         // The open UK guide splits ITV1 by region (e.g. ITV1 Anglia).
         // Include those regional feeds for the single ITV1 stream, but never +1.
-        const compact = key.replace(/\\s+/g, '');
+        const compact = key.replace(/\s+/g, '');
         if (/^itv1(?!plusone)[a-z]+$/.test(compact)) addId('itv1', id);
       }
     }
