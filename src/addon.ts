@@ -180,7 +180,11 @@ function displayChannelName(name: string): string {
 function normalizeName(s: string): string {
     const normalized = (s || '')
         .toLowerCase()
-        .replace(/é/g, 'e')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        // Keep time-shifted channels separate from their base channel.
+        .replace(/\+\s*1\b/g, ' plusone ')
+        .replace(/(?:'|’)/g, '')
         .replace(/\bhd\b|\buhd\b|\b4k\b|\btv\b|\bplus\b/g, ' ')
         .replace(/\bsports\b/g, 'sport')
         .replace(/[^a-z0-9]+/g, ' ')
@@ -675,7 +679,8 @@ const UK_LOGO_OVERRIDES: Record<string, string> = {
     'itv3': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/itv-3-uk.png',
     'film4': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/film-4-uk.png',
     'sky max': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/sky-max-uk.png',
-    'discovery id': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/investigation-discovery-uk.png'
+    'discovery id': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/investigation-discovery-uk.png',
+    'watch': 'https://www.tvlogo.org/united-kingdom/watch-free-uk-uk.png'
 };
 function getUkLogoOverride(name: string): string | undefined {
     return UK_LOGO_OVERRIDES[normalizeName(name)];
