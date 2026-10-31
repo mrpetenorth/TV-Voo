@@ -1800,7 +1800,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
         const metas = pagedGroups.map(({ baseName, items: groupItems }) => {
             const hint = getResolvedHint(country.id, baseName);
             const fallbackArt = fallbackPosterAbsUrl || TVVOO_FALLBACK_ABS;
-            const actualLogoArt = hint.logo || (cid === 'uk' ? findStaticLogo(cid, baseName) : undefined) || undefined;
+            const actualLogoArt = hint.logo || (country.id === 'uk' ? findStaticLogo(country.id, baseName) : undefined) || undefined;
             const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
             const posterArt = country.id === 'it'
                 ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
