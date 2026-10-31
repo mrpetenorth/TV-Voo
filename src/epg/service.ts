@@ -108,9 +108,17 @@ export class EPGService {
         const res = await fetch(url, { timeout: 30000 } as any);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const bytes = Buffer.from(await res.arrayBuffer());
-        const xml = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b
+        let xml = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b
           ? gunzipSync(bytes).toString('utf8')
           : bytes.toString('utf8');
+        // Some XMLTV hosts prepend/append non-XML text (for example a
+        // proxy/banner response). Keep only the actual XMLTV document.
+        const rootStart = xml.search(/<tv(?:\\s|>)/i);
+        const rootEnd = xml.toLowerCase().lastIndexOf('</tv>');
+        if (rootStart < 0 || rootEnd < rootStart) {
+          throw new Error(`Response does not contain an XMLTV <tv> document (starts: ${xml.slice(0, 160).replace(/\\s+/g, ' ')})`);
+        }
+        xml = xml.slice(rootStart, rootEnd + 5);
         const index = this.parse(xml);
         successfulSources++;
 
