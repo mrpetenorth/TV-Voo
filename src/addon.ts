@@ -1633,8 +1633,9 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
                 return { metas: cached.metas };
             }
         }
-        // Grab EPG index only for Italy
-        const enableEpg = country.id === 'it';
+        // EPG enrichment is limited to TV channel catalogues (UK and Italy).
+        // Movies and series from other add-ons/catalogues are never touched.
+        const enableEpg = country.id === 'it' || country.id === 'uk';
         const epgIdx = enableEpg ? epg.getIndex() : null;
         // First pass: compute cleaned names
         const cleaned = items.map((it: any) => cleanupChannelName(it?.name || 'Unknown'));
@@ -1829,8 +1830,9 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
                     ? getUkHeroBackgroundUrl()
                     : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
             const cat = hint.cat;
-            // EPG (Italy only)
+            // EPG programme text is added only to this curated TV-channel catalogue.
             let description: string | undefined = undefined;
+            let releaseInfo: string | undefined = undefined;
             if (enableEpg && epgIdx) {
                 try {
                     const key = normalizeChannelName(baseName);
@@ -1891,6 +1893,14 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
                         if (nowTitle || nowDescReduced) parts.push(`🔴 ${[nowTitle, short(nowDescReduced)].filter(Boolean).join(' — ')}`);
                         if (nextTitle || nextDesc) parts.push(`➡️ ${[nextTitle, short(nextDesc)].filter(Boolean).join(' — ')}`);
                         description = parts.join('  •  ');
+                        // Nuvio uses releaseInfo as the compact secondary line on Discover cards.
+                        // Keep it short and title-only; fuller descriptions remain on the detail page.
+                        if (country.id === 'uk') {
+                            const compact = [] as string[];
+                            if (nowTitle) compact.push(`NOW: ${nowTitle}`);
+                            if (nextTitle) compact.push(`NEXT: ${nextTitle}`);
+                            if (compact.length) releaseInfo = compact.join('  ·  ').slice(0, 150);
+                        }
                     }
                 } catch { }
             }
@@ -1903,6 +1913,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
                 logo: logoArt || getPlaceholderLogo(baseName),
                 background: backgroundArt || actualLogoArt || fallbackArt || undefined,
                 description,
+                releaseInfo,
                 genres: (cat && !isBannedCategory(cat)) ? [cat] : undefined,
                 behaviorHints: {
                     isLive: true
@@ -1967,7 +1978,7 @@ builder.defineMetaHandler(async ({ type, id }: { type: string; id: string }) => 
         let nowDesc: string | undefined;
         let nextTitle: string | undefined;
         let nextDesc: string | undefined;
-        if (cid === 'it') {
+        if (cid === 'it' || cid === 'uk') {
             const idx = epg.getIndex();
             const key = normalizeChannelName(baseName);
             const candidates = idx.nameToIds?.[key] || [];
@@ -2027,7 +2038,7 @@ builder.defineMetaHandler(async ({ type, id }: { type: string; id: string }) => 
             const cat = cid === 'it' ? findBestCategory(cid, baseName) : findStaticCategory(cid, baseName);
             if (cat && !isBannedCategory(cat)) metaOut.genres = [cat];
         }
-        if (cid === 'it' && (nowTitle || nowDesc || nextTitle || nextDesc)) {
+        if ((cid === 'it' || cid === 'uk') && (nowTitle || nowDesc || nextTitle || nextDesc)) {
             const parts = [] as string[];
             const shortDesc = (s?: string) => {
                 if (!s) return '';
