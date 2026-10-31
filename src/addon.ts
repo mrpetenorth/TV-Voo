@@ -199,6 +199,7 @@ function normalizeName(s: string): string {
         .replace(/^u w$/, 'watch')
         .replace(/^boxnation$/, 'box nation')
         .replace(/^wwe network$/, 'wwe')
+        .replace(/^investigation discovery$/, 'discovery id')
         .replace(/^itv be$/, 'itvbe')
         .replace(/^itv 1$/, 'itv1')
         .replace(/^5usa$/, '5 usa')
