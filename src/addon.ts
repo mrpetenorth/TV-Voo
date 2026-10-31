@@ -2057,7 +2057,7 @@ builder.defineMetaHandler(async ({ type, id }: { type: string; id: string }) => 
             metaOut.description = parts.join(' • ');
         }
         let metaVideos: any[] = [];
-        if (cid === 'it' && epg && typeof epg.getUpcomingProgrammes === 'function') {
+        if ((cid === 'it' || cid === 'uk') && epg && typeof epg.getUpcomingProgrammes === 'function') {
             const key = normalizeChannelName(baseName);
             const idx = epg.getIndex();
             const candidates = idx?.nameToIds?.[key] || [];
