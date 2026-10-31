@@ -1575,7 +1575,7 @@ if (VAVOO_DISABLE_EPG) {
     vdbg('EPG disabled via env');
     epg = { refresh: async () => { }, getIndex: () => ({ updatedAt: 0, byChannel: {}, nameToIds: {}, nowNext: {} }) };
 } else {
-    const epgUrl = process.env.EPG_URL || 'https://www.open-epg.com/files/unitedkingdom.xml';
+    const epgUrl = process.env.EPG_URL || 'https://raw.githubusercontent.com/acidjesuz/EPGTalk/master/UK_guide.xml.gz';
     epg = new EPGService({
         url: epgUrl,
         additionalUrls: process.env.EPG_EXTRA_URLS ? process.env.EPG_EXTRA_URLS.split(',').map((url: string) => url.trim()).filter(Boolean) : [],
