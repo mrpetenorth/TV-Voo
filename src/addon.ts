@@ -1582,7 +1582,7 @@ if (VAVOO_DISABLE_EPG) {
     const epgUrl = process.env.EPG_URL || 'https://www.open-epg.com/files/unitedkingdom.xml';
     epg = new EPGService({
         url: epgUrl,
-        additionalUrls: process.env.EPG_EXTRA_URLS ? process.env.EPG_EXTRA_URLS.split(',').map((url: string) => url.trim()).filter(Boolean) : ['https://raw.githubusercontent.com/acidjesuz/EPGTalk/master/UK_guide.xml.gz'],
+        additionalUrls: process.env.EPG_EXTRA_URLS ? process.env.EPG_EXTRA_URLS.split(',').map((url: string) => url.trim()).filter(Boolean) : ['https://raw.githubusercontent.com/acidjesuz/EPGTalk/master/UK_guide.xml.gz', 'https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz'],
         refreshCron: '0 */10 * * *',
         fallbackTimeZone: 'Europe/Rome',
         // Apply fallback TZ to channels that look Italian (tvg-id commonly ends with .it or contains .it.)
