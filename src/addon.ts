@@ -178,9 +178,9 @@ function displayChannelName(name: string): string {
 }
 
 function normalizeName(s: string): string {
-    const sourceName = (s || '').toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').trim();
-    if (/^disney\\s+channel(?:\\s+hd)?$/.test(sourceName)) return 'disney channel';
-    if (/^disney\\s*\\+(?:\\s*xd)?(?:\\s+hd)?$/.test(sourceName)) return 'disney xd';
+    const sourceName = (s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim();
+    if (/^disney\s+channel(?:\s+hd)?$/.test(sourceName)) return 'disney channel';
+    if (/^disney\s*\\+(?:\s*xd)?(?:\s+hd)?$/.test(sourceName)) return 'disney xd';
     const normalized = (s || '')
         .toLowerCase()
         .normalize('NFKD')
@@ -195,7 +195,10 @@ function normalizeName(s: string): string {
         .trim();
     // Common UK listing variations.
     return normalized
-        .replace(/^u (dave|drama|gold|yesterday|watch)$/, '$1')\n        .replace(/^u w$/, 'watch')\n        .replace(/^boxnation$/, 'box nation')\n        .replace(/^wwe network$/, 'wwe')
+        .replace(/^u (dave|drama|gold|yesterday|watch)$/, '$1')
+        .replace(/^u w$/, 'watch')
+        .replace(/^boxnation$/, 'box nation')
+        .replace(/^wwe network$/, 'wwe')
         .replace(/^itv be$/, 'itvbe')
         .replace(/^itv 1$/, 'itv1')
         .replace(/^5usa$/, '5 usa')
