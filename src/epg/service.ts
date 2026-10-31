@@ -154,7 +154,7 @@ export class EPGService {
         addId(key, id);
         // The open UK guide splits ITV1 by region (e.g. ITV1 Anglia).
         // Include those regional feeds for the single ITV1 stream, but never +1.
-        const compact = key.replace(/\\s+/g, '');
+        const compact = key.replace(/\s+/g, '');
         if (/^itv1(?!plusone)[a-z]+$/.test(compact)) addId('itv1', id);
       }
     }
