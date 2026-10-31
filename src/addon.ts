@@ -193,7 +193,10 @@ function normalizeName(s: string): string {
         .replace(/^5usa$/, '5 usa')
         // The source feed labels Disney XD as Disney+.
         .replace(/^disney$/, 'disney xd')
-        .replace(/^hallmark channel$/, 'hallmark');
+        .replace(/^hallmark channel$/, 'hallmark')
+        // UK feed aliases: some source labels insert a space into these channel names.
+        .replace(/^itv ([234])$/, 'itv$1')
+        .replace(/^film 4$/, 'film4');
 }
 
 
@@ -669,6 +672,18 @@ function shardPathCandidates(cid: string): string[] {
 
 // Cache resolved hints per country and baseName to avoid repeated fuzzy matching
 type ResolvedHint = { logo?: string; cat?: string };
+const UK_LOGO_OVERRIDES: Record<string, string> = {
+    'itv2': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/itv-2-uk.png',
+    'itv3': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/itv-3-uk.png',
+    'film4': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/film-4-uk.png',
+    'sky max': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/sky-max-uk.png',
+    'discovery id': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/investigation-discovery-uk.png',
+    'cbs action': 'https://upload.wikimedia.org/wikipedia/commons/9/98/CBS_action_RGB.png'
+};
+function getUkLogoOverride(name: string): string | undefined {
+    return UK_LOGO_OVERRIDES[normalizeName(name)];
+}
+
 const resolvedHints: Record<string, Record<string, ResolvedHint>> = {};
 function getResolvedHint(countryId: string, baseName: string): ResolvedHint {
     const key = baseName.toLowerCase();
@@ -1752,7 +1767,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
             const metasDetailed = pagedGroups.map(({ baseName, items: groupItems }) => {
                 const hint = getResolvedHint(country.id, baseName);
                 const fallbackArt = fallbackPosterAbsUrl || TVVOO_FALLBACK_ABS;
-                const actualLogoArt = hint.logo || (country.id === 'uk' ? findStaticLogo(country.id, baseName) : undefined) || undefined;
+                const actualLogoArt = (country.id === 'uk' ? getUkLogoOverride(baseName) : undefined) || hint.logo || (country.id === 'uk' ? findStaticLogo(country.id, baseName) : undefined) || undefined;
                 const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
                 const posterArt = country.id === 'it'
                     ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
@@ -1800,7 +1815,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
         const metas = pagedGroups.map(({ baseName, items: groupItems }) => {
             const hint = getResolvedHint(country.id, baseName);
             const fallbackArt = fallbackPosterAbsUrl || TVVOO_FALLBACK_ABS;
-            const actualLogoArt = hint.logo || (country.id === 'uk' ? findStaticLogo(country.id, baseName) : undefined) || undefined;
+            const actualLogoArt = (country.id === 'uk' ? getUkLogoOverride(baseName) : undefined) || hint.logo || (country.id === 'uk' ? findStaticLogo(country.id, baseName) : undefined) || undefined;
             const logoArt = actualLogoArt || getPlaceholderLogo(baseName);
             const posterArt = country.id === 'it'
                 ? getItalyCoverPortrait(baseName) || getItalyGeneratedCoverPortrait(baseName) || actualLogoArt || getPlaceholderPoster(baseName)
@@ -1927,7 +1942,7 @@ builder.defineMetaHandler(async ({ type, id }: { type: string; id: string }) => 
         const fallbackArt = fallbackPosterAbsUrl || TVVOO_FALLBACK_ABS;
         let actualLogoArt: string | undefined;
         if (cid) {
-            actualLogoArt = (cid === 'it' ? findBestLogo(cid, baseName) : findStaticLogo(cid, baseName)) || undefined;
+            actualLogoArt = (cid === 'uk' ? getUkLogoOverride(baseName) : undefined) || (cid === 'it' ? findBestLogo(cid, baseName) : findStaticLogo(cid, baseName)) || undefined;
         } else {
             actualLogoArt = findBestLogoAny(baseName) || undefined;
         }
