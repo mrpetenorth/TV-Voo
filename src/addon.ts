@@ -681,7 +681,7 @@ const UK_LOGO_OVERRIDES: Record<string, string> = {
     'film4': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/film-4-uk.png',
     'sky max': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/sky-max-uk.png',
     'discovery id': 'https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/investigation-discovery-uk.png',
-    'watch': 'https://www.tvlogo.org/united-kingdom/watch-free-uk-uk.png'
+    'watch': 'https://www.tvlogo.org/united-kingdom/u-plus-w.png'
 };
 function getUkLogoOverride(name: string): string | undefined {
     return UK_LOGO_OVERRIDES[normalizeName(name)];
