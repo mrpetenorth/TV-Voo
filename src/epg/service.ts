@@ -95,8 +95,14 @@ export class EPGService {
 
   public async refresh(): Promise<void> {
     const urls = [this.url, ...this.additionalUrls].filter(Boolean);
-    const indexes: EPGIndex[] = [];
     const failures: string[] = [];
+    // Merge each source as it is parsed instead of retaining every full guide
+    // in an indexes[] array. On small Render instances, holding three complete
+    // XMLTV indexes plus the merged result can exceed Node's heap limit.
+    const byChannel: Record<string, Programme[]> = {};
+    const channelNames: Record<string, string[]> = {};
+    let successfulSources = 0;
+
     for (const url of urls) {
       try {
         const res = await fetch(url, { timeout: 30000 } as any);
@@ -105,26 +111,22 @@ export class EPGService {
         const xml = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b
           ? gunzipSync(bytes).toString('utf8')
           : bytes.toString('utf8');
-        indexes.push(this.parse(xml));
+        const index = this.parse(xml);
+        successfulSources++;
+
+        for (const [id, programmes] of Object.entries(index.byChannel)) {
+          (byChannel[id] ||= []).push(...programmes);
+        }
+        for (const [id, names] of Object.entries(index.channelNames)) {
+          const merged = channelNames[id] ||= [];
+          for (const name of names) if (!merged.includes(name)) merged.push(name);
+        }
+        // index, xml and bytes become collectible before the next source is fetched.
       } catch (error: any) {
         failures.push(`${url}: ${error?.message || error}`);
       }
     }
-    if (!indexes.length) throw new Error(`All EPG sources failed: ${failures.join('; ')}`);
-
-    // Combine independent guides. Keep all channel ids so a missing listing in one
-    // provider can be supplied by another without changing the stream catalogue.
-    const byChannel: Record<string, Programme[]> = {};
-    const channelNames: Record<string, string[]> = {};
-    for (const index of indexes) {
-      for (const [id, programmes] of Object.entries(index.byChannel)) {
-        (byChannel[id] ||= []).push(...programmes);
-      }
-      for (const [id, names] of Object.entries(index.channelNames)) {
-        const merged = channelNames[id] ||= [];
-        for (const name of names) if (!merged.includes(name)) merged.push(name);
-      }
-    }
+    if (!successfulSources) throw new Error(`All EPG sources failed: ${failures.join('; ')}`);
 
     const now = Date.now();
     const nowNext: EPGIndex['nowNext'] = {};
@@ -154,7 +156,7 @@ export class EPGService {
         addId(key, id);
         // The open UK guide splits ITV1 by region (e.g. ITV1 Anglia).
         // Include those regional feeds for the single ITV1 stream, but never +1.
-        const compact = key.replace(/\s+/g, '');
+        const compact = key.replace(/\\s+/g, '');
         if (/^itv1(?!plusone)[a-z]+$/.test(compact)) addId('itv1', id);
       }
     }
