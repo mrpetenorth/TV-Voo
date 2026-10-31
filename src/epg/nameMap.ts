@@ -5,13 +5,13 @@ export function normalizeChannelName(raw: string): string {
   const normalized = raw
     .toLowerCase()
     // drop trailing .c/.s/.b etc
-    .replace(/\\s*(\\.[a-z0-9]{1,3})+$/i, '')
+    .replace(/\s*(\.[a-z0-9]{1,3})+$/i, '')
     // unify separators
     .replace(/[^a-z0-9]+/g, ' ')
     // remove generic suffixes
-    .replace(/\\b(hd|uhd|4k|tv|channel|plus)\\b/g, ' ')
-    .replace(/\\bsports\\b/g, 'sport')
-    .replace(/\\s+/g, ' ')
+    .replace(/\b(hd|uhd|4k|tv|channel|plus)\b/g, ' ')
+    .replace(/\bsports\b/g, 'sport')
+    .replace(/\s+/g, ' ')
     .trim();
 
   // Explicit UK EPG aliases. These collapse common branding/display-name
