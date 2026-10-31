@@ -192,6 +192,7 @@ function normalizeName(s: string): string {
         .trim();
     // Common UK listing variations.
     return normalized
+        .replace(/^u (dave|drama|gold|yesterday|watch)$/, '$1')
         .replace(/^itv be$/, 'itvbe')
         .replace(/^itv 1$/, 'itv1')
         .replace(/^5usa$/, '5 usa')
