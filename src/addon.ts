@@ -172,6 +172,7 @@ function displayChannelName(name: string): string {
     const cleaned = cleanupChannelName(name).replace(/\s+\b(?:HD|UHD|4K)\b\s*$/i, '').trim();
     const key = normalizeName(cleaned);
     if (key === 'itvbe') return 'ITV BE';
+    if (key === 'itv1') return 'ITV1';
     if (key === '5 usa') return '5USA';
     if (key === 'disney xd') return 'DISNEY XD';
     return cleaned.replace(/^TNT\s+SPORTS?\b/i, 'TNT SPORTS');
@@ -181,6 +182,7 @@ function normalizeName(s: string): string {
     const sourceName = (s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim();
     if (/^disney\s+channel(?:\s+hd)?$/.test(sourceName)) return 'disney channel';
     if (/^disney\s*\+(?:\s*xd)?(?:\s+hd)?$/.test(sourceName)) return 'disney xd';
+    if (/^sky sports\s*(?:\+|plus)$/.test(sourceName)) return 'sky sports arena';
     const normalized = (s || '')
         .toLowerCase()
         .normalize('NFKD')
@@ -202,11 +204,13 @@ function normalizeName(s: string): string {
         .replace(/^investigation discovery$/, 'discovery id')
         .replace(/^itv be$/, 'itvbe')
         .replace(/^itv 1$/, 'itv1')
+        .replace(/^itv1 (?:anglia|border|central|granada|meridian|tyne tees|wales|westcountry|west|scotland|utv|channel tv)$/, 'itv1')
         .replace(/^5usa$/, '5 usa')
         .replace(/^hallmark channel$/, 'hallmark')
         // UK feed aliases: some source labels insert a space into these channel names.
         .replace(/^itv ([234])$/, 'itv$1')
-        .replace(/^film 4$/, 'film4');
+        .replace(/^film 4$/, 'film4')
+        .replace(/^rte ?1$/, 'rte one');
 }
 
 
@@ -241,18 +245,16 @@ const UK_PERSONAL_CHANNELS = [
     'TNT SPORTS 2',
     'TNT SPORTS 3',
     'TNT SPORTS 4',
-    'TNT SPORTS ESPN',
     'TNT SPORTS ULTIMATE',
     'TNT SPORTS BOX OFFICE',
     'PREMIER SPORTS 1',
     'PREMIER SPORTS 2',
-    'BOX NATION',
     'WWE',
     'SKY ATLANTIC',
     'SKY CRIME',
     'SKY DOCUMENTARIES',
     'SKY HISTORY',
-    'SKY MAX',
+    'SKY ONE',
     'SKY MIX',
     'SKY NATURE',
     'SKY ARTS',
@@ -269,7 +271,6 @@ const UK_PERSONAL_CHANNELS = [
     'HORRORXTRA',
     'RTÉ ONE',
     'RTÉ TWO',
-    'UNIVERSAL CHANNEL',
     'COMEDY CENTRAL',
     'DAVE',
     'BLAZE',
@@ -277,15 +278,12 @@ const UK_PERSONAL_CHANNELS = [
     'CBS DRAMA',
     'DRAMA',
     'GOLD',
-    'THATS TV GOLD',
     'YESTERDAY',
     'WATCH',
-    'PICK',
     'MTV LIVE',
     'BOOMERANG',
     'CARTOON NETWORK',
     'DISNEY CHANNEL',
-    'DISNEY XD',
     'GREAT! CHRISTMAS',
     'HALLMARK'
 ] as const;
@@ -299,11 +297,11 @@ const UK_DISCOVER_CATEGORIES = [
             'BBC ONE', 'BBC TWO', 'BBC THREE', 'BBC FOUR',
             'ITV1', 'ITV2', 'ITV3', 'ITV4', 'ITV BE',
             'CHANNEL 4', 'E4', 'MORE4', 'CHANNEL 5', 'MY5', '5USA',
-            'SKY ATLANTIC', 'SKY MAX', 'SKY MIX',
-            'RTÉ ONE', 'RTÉ TWO', 'UNIVERSAL CHANNEL',
+            'SKY ATLANTIC', 'SKY ONE', 'SKY MIX',
+            'RTÉ ONE', 'RTÉ TWO',
             'COMEDY CENTRAL', 'DAVE', 'BLAZE', 'CHALLENGE',
             'CBS DRAMA',
-            'DRAMA', 'WATCH', 'PICK', 'HALLMARK'
+            'DRAMA', 'WATCH', 'HALLMARK'
         ]
     },
     {
@@ -314,8 +312,8 @@ const UK_DISCOVER_CATEGORIES = [
             'SKY SPORTS MAIN EVENT', 'SKY SPORTS ACTION',
             'SKY SPORTS ARENA', 'SKY SPORTS TENNIS', 'SKY SPORTS GOLF',
             'TNT SPORTS 1', 'TNT SPORTS 2', 'TNT SPORTS 3', 'TNT SPORTS 4',
-            'TNT SPORTS ESPN', 'TNT SPORTS ULTIMATE', 'TNT SPORTS BOX OFFICE',
-            'PREMIER SPORTS 1', 'PREMIER SPORTS 2', 'BOX NATION', 'WWE'
+            'TNT SPORTS ULTIMATE', 'TNT SPORTS BOX OFFICE',
+            'PREMIER SPORTS 1', 'PREMIER SPORTS 2', 'WWE'
         ]
     },
     {
@@ -333,7 +331,7 @@ const UK_DISCOVER_CATEGORIES = [
         id: 'classic',
         name: 'Classic',
         channels: [
-            'SKY HISTORY', 'DRAMA', 'GOLD', 'THATS TV GOLD', 'YESTERDAY', 'WATCH'
+            'SKY HISTORY', 'DRAMA', 'GOLD', 'YESTERDAY', 'WATCH'
         ]
     },
     {
@@ -349,7 +347,7 @@ const UK_DISCOVER_CATEGORIES = [
     {
         id: 'kids',
         name: 'Kids',
-        channels: ['BOOMERANG', 'CARTOON NETWORK', 'DISNEY CHANNEL', 'DISNEY XD']
+        channels: ['BOOMERANG', 'CARTOON NETWORK', 'DISNEY CHANNEL']
     }
 ] as const;
 
@@ -372,7 +370,7 @@ function selectPersonalUkRows<T extends { it: any; baseName: string }>(input: T[
                 const qualityB = /\b(?:HD|UHD|4K)\b/i.test(String(b.it?.name || b.baseName)) ? 1 : 0;
                 return qualityB - qualityA;
             });
-            selected.push(ranked[0]);
+            selected.push(wanted === 'ITV1' ? { ...ranked[0], baseName: 'ITV1' } : ranked[0]);
         } else {
             const hdMatches = matches.filter(row => /\b(?:HD|UHD|4K)\b/i.test(String(row.it?.name || row.baseName)));
             selected.push(...(hdMatches.length ? hdMatches : matches));
@@ -456,7 +454,7 @@ function getUkCustomPoster(name: string): string | undefined {
 function getUkLogoPosterUrl(name: string, logoUrl?: string): string | undefined {
     if (!logoUrl || !/^https:\/\//i.test(logoUrl)) return undefined;
     // Bump the artwork URL so Nuvio/Android TV discards previously cached logo-less tiles.
-    return `https://tv-voo.onrender.com/uk-poster.svg?v=4&name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
+    return `https://tv-voo.onrender.com/uk-poster.svg?v=5&name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
 }
 
 function getUkHeroBackgroundUrl(): string {
