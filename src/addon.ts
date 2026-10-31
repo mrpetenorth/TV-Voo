@@ -448,7 +448,7 @@ function getUkCustomPoster(name: string): string | undefined {
 function getUkLogoPosterUrl(name: string, logoUrl?: string): string | undefined {
     if (!logoUrl || !/^https:\/\//i.test(logoUrl)) return undefined;
     // Bump the artwork URL so Nuvio/Android TV discards previously cached logo-less tiles.
-    return `https://tv-voo.onrender.com/uk-poster.svg?v=2&name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
+    return `https://tv-voo.onrender.com/uk-poster.svg?v=3&name=${encodeURIComponent(name)}&logo=${encodeURIComponent(logoUrl)}`;
 }
 
 function getUkHeroBackgroundUrl(): string {
@@ -2304,8 +2304,13 @@ app.get('/uk-poster.svg', async (req: Request, res: Response) => {
     const width = hero ? 1920 : 1200;
     const height = hero ? 1080 : 1200;
     const safeLogo = (embeddedLogo || logo).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // CBS Action's historic wordmark is an unusually wide, shallow logo.
+    // Give it a wider, dedicated placement so it remains legible on square TV tiles.
+    const isCbsAction = /cbs[\s+_-]*action/i.test(String(req.query.name || ''));
     const logoBox = !hero && safeLogo
-        ? `<image href="${safeLogo}" xlink:href="${safeLogo}" x="165" y="205" width="870" height="790" preserveAspectRatio="xMidYMid meet"/>`
+        ? isCbsAction
+            ? `<image href="${safeLogo}" xlink:href="${safeLogo}" x="30" y="400" width="1140" height="400" preserveAspectRatio="xMidYMid meet"/>`
+            : `<image href="${safeLogo}" xlink:href="${safeLogo}" x="165" y="205" width="870" height="790" preserveAspectRatio="xMidYMid meet"/>`
         : '';
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#061b59"/><stop offset=".52" stop-color="#0759b9"/><stop offset="1" stop-color="#03245f"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="#1685e9" stop-opacity=".55"/><stop offset="1" stop-color="#1685e9" stop-opacity="0"/></radialGradient></defs><rect width="${width}" height="${height}" fill="url(#bg)"/><circle cx="${hero ? 1550 : 900}" cy="${hero ? 40 : 100}" r="${hero ? 600 : 520}" fill="url(#glow)"/><path d="M-80 ${hero ? 650 : 820} Q${hero ? 480 : 300} ${hero ? 580 : 760} ${hero ? 960 : 600} ${hero ? 420 : 620} T${width+80} ${hero ? 280 : 410} L${width+80} ${height+120} L-80 ${height+120}Z" fill="#0b3f91" opacity=".52"/><path d="M-80 ${hero ? 760 : 930} Q${hero ? 520 : 320} ${hero ? 700 : 880} ${hero ? 1050 : 650} ${hero ? 560 : 730} T${width+80} ${hero ? 430 : 550}" fill="none" stroke="#4da5f6" stroke-width="5" opacity=".16"/><path d="M-80 ${hero ? 850 : 1020} Q${hero ? 540 : 340} ${hero ? 790 : 960} ${hero ? 1100 : 680} ${hero ? 660 : 830} T${width+80} ${hero ? 540 : 660}" fill="none" stroke="#8bc7ff" stroke-width="3" opacity=".12"/>${logoBox}</svg>`;
     res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
