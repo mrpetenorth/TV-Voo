@@ -1790,7 +1790,7 @@ builder.defineCatalogHandler(async ({ id, type, extra }: { id: string; type: str
                 const backgroundArt = country.id === 'it'
                     ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
                     : country.id === 'uk'
-                        ? getUkHeroBackgroundUrl(baseName, actualLogoArt) || fallbackArt || undefined
+                        ? getUkHeroBackgroundUrl() || fallbackArt || undefined
                         : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
                 const cat = hint.cat;
                 const channelId = `vavoo_${encodeURIComponent(baseName)}|group:${country.id}`;
@@ -1982,7 +1982,7 @@ builder.defineMetaHandler(async ({ type, id }: { type: string; id: string }) => 
         const background = cid === 'it'
             ? getItalyCoverLandscape(baseName) || getItalyGeneratedCoverLandscape(baseName) || actualLogoArt || fallbackArt || undefined
             : cid === 'uk'
-                ? getUkHeroBackgroundUrl(baseName, actualLogoArt) || fallbackArt || undefined
+                ? getUkHeroBackgroundUrl() || fallbackArt || undefined
                 : getWorldCoverLandscape(baseName) || fallbackArt || undefined;
         // Try to enrich with EPG now/next only for Italy
         let nowTitle: string | undefined;
