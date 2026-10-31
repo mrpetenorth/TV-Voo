@@ -180,20 +180,14 @@ function displayChannelName(name: string): string {
 function normalizeName(s: string): string {
     const normalized = (s || '')
         .toLowerCase()
-        .normalize('NFKD')
-        .replace(/[\\u0300-\\u036f]/g, '')
-        // Keep ITV+1 distinct so it can never be selected as ITV1.
-        .replace(/\\+\\s*1\\b/g, ' plusone ')
-        .replace(/(?:'|’)/g, '')
-        .replace(/\\bhd\\b|\\buhd\\b|\\b4k\\b|\\btv\\b|\\bplus\\b/g, ' ')
-        .replace(/\\bsports\\b/g, 'sport')
+        .replace(/é/g, 'e')
+        .replace(/\bhd\b|\buhd\b|\b4k\b|\btv\b|\bplus\b/g, ' ')
+        .replace(/\bsports\b/g, 'sport')
         .replace(/[^a-z0-9]+/g, ' ')
-        .replace(/\\s+/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
     // Common UK listing variations.
     return normalized
-        .replace(/^u and watch$/, 'watch')
-        .replace(/^u watch$/, 'watch')
         .replace(/^itv be$/, 'itvbe')
         .replace(/^itv 1$/, 'itv1')
         .replace(/^5usa$/, '5 usa')
