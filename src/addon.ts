@@ -2302,7 +2302,7 @@ app.get('/uk-poster.svg', async (req: Request, res: Response) => {
 
     const width = hero ? 1920 : 1200;
     const height = hero ? 1080 : 1200;
-    const safeLogo = embeddedLogo.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeLogo = (embeddedLogo || logo).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const logoBox = !hero && safeLogo
         ? `<image href="${safeLogo}" xlink:href="${safeLogo}" x="165" y="205" width="870" height="790" preserveAspectRatio="xMidYMid meet"/>`
         : '';
