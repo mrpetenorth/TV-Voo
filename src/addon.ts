@@ -149,11 +149,9 @@ function writeMapToDisk(file: string, map: Record<string, string>): void {
     try { fs.writeFileSync(file, JSON.stringify(map, null, 2), 'utf8'); } catch { }
 }
 
-const COVER_MAPS = readCoverMapsFromDisk();
-// UK artwork only needs the shared world fallback maps; do not retain Italy-only cover data.
+const { world_portrait_map: COVERS_WORLD_MAP = {}, landscape_map: COVERS_LANDSCAPE_MAP = {} } = readCoverMapsFromDisk();
+// Italy-only generated portrait artwork is intentionally not loaded in UK-only mode.
 const COVERS_PORTRAIT_MAP: Record<string, string> = {};
-const COVERS_WORLD_MAP: Record<string, string> = COVER_MAPS.world_portrait_map || {};
-const COVERS_LANDSCAPE_MAP: Record<string, string> = COVER_MAPS.landscape_map || {};
 
 let italyCoverPortraitMap: Record<string, string> = {};
 let italyCoverLandscapeMap: Record<string, string> = {};
