@@ -1585,7 +1585,7 @@ if (VAVOO_DISABLE_EPG) {
         fallbackTimeZoneFilter: (chId: string) => /(^|\.)it(\.|$)/i.test(chId) || /italy|italia/i.test(chId),
     });
     // Kick off initial fetch in background (don’t block server startup)
-    epg.refresh().catch(() => { });
+    epg.refresh().catch((error: any) => console.error('[EPG] Initial refresh failed:', error?.message || error));
 }
 
 // Catalog handler: list Vavoo channels for the selected country
