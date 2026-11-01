@@ -1554,7 +1554,7 @@ const manifest: Manifest = {
         {
             id: buildTvCatalogId('uk'),
             type: 'tv' as const,
-            name: 'United Kingdom',
+            name: 'TV',
             extra: [
                 { name: 'genre', options: categoriesOptionsForCountry('uk'), isRequired: false },
                 { name: 'date', isRequired: false },
@@ -2615,7 +2615,7 @@ app.get(['/cfg-:cfg/free/manifest.json', '/cfg-:cfg/force/manifest.json', '/cfg-
                         { name: 'skip', isRequired: false }
                     ];
                     if (opts.length) extra.push({ name: 'genre', options: opts, isRequired: false } as any);
-                    return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: c.id === 'uk' ? 'United Kingdom' : `TvVoo • ${c.name}`, extra };
+                    return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: c.id === 'uk' ? 'TV' : `TvVoo • ${c.name}`, extra };
                 }),
                 // TV Search catalogs (search only)
                 ...countries.map(c => ({
@@ -2671,7 +2671,7 @@ app.get(['/:cfg/free/manifest.json', '/:cfg/manifest.json'], (req: Request, res:
                         ...(c.id === EPG_COUNTRY_ID ? [{ name: 'date', isRequired: false }] : [])
                     ];
                     if (opts.length) extra.push({ name: 'genre', options: opts, isRequired: false } as any);
-                    return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: c.id === 'uk' ? 'United Kingdom' : `Vavoo TV • ${c.name}`, extra };
+                    return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: c.id === 'uk' ? 'TV' : `Vavoo TV • ${c.name}`, extra };
                 }),
                 // TV Search catalogs (search only)
                 ...countries.map(c => ({
@@ -2711,7 +2711,7 @@ app.get(['/free/manifest.json', '/manifest.json'], (req: Request, res: Response)
                     ...(c.id === EPG_COUNTRY_ID ? [{ name: 'date', isRequired: false }] : [])
                 ];
                 if (opts.length) extra.push({ name: 'genre', options: opts, isRequired: false } as any);
-                return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: c.id === 'uk' ? 'United Kingdom' : `Vavoo TV • ${c.name}`, extra };
+                return { id: buildTvCatalogId(c.id, showHomeCatalog), type: 'tv' as const, name: c.id === 'uk' ? 'TV' : `Vavoo TV • ${c.name}`, extra };
             }),
             // TV Search catalogs (search only)
             ...countries.map(c => ({
