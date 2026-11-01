@@ -68,8 +68,8 @@ const PLACEHOLD_LOGO_SIZE = '900x270';
 // Behavior flags (config via env)
 const VAVOO_SET_IPLOCATION_ONLY = (process.env.VAVOO_SET_IPLOCATION_ONLY || '').toLowerCase() === 'true' || process.env.VAVOO_SET_IPLOCATION_ONLY === '1';
 const VAVOO_LOG_SIG_FULL = (process.env.VAVOO_LOG_SIG_FULL || '').toLowerCase() === 'true' || process.env.VAVOO_LOG_SIG_FULL === '1';
-// Native Stremio EPG data is only available for Italy
-const EPG_COUNTRY_ID = 'it';
+// The UK XMLTV feed is the native Stremio EPG source for this UK-focused addon.
+const EPG_COUNTRY_ID = 'uk';
 const VAVOO_DISABLE_EPG = (process.env.VAVOO_DISABLE_EPG || process.env.EPG_DISABLED || '').toLowerCase() === 'true' || process.env.VAVOO_DISABLE_EPG === '1' || process.env.EPG_DISABLED === '1';
 const VAVOO_REFRESH_WHITELIST: Set<string> | null = (() => {
     const raw = process.env.VAVOO_REFRESH_COUNTRIES || '';
@@ -1543,7 +1543,7 @@ async function resolveVavooCleanUrl(vavooPlayUrl: string, clientIp: string | nul
 const manifest: Manifest = {
     id: 'org.stremio.vavoo.clean',
     version: '5.2.0',
-    name: 'TvVoo | ElfHosted',
+    name: 'TVVoo | ElfHosted',
     description: "Stremio addon that lists VAVOO TV channels and resolves clean HLS using the viewer's IP.",
     background: 'https://raw.githubusercontent.com/qwertyuiop8899/StreamViX/refs/heads/main/public/backround.png',
     logo: 'https://i.imgur.com/miRBJ2B.png',
@@ -1557,6 +1557,7 @@ const manifest: Manifest = {
             name: 'United Kingdom',
             extra: [
                 { name: 'genre', options: categoriesOptionsForCountry('uk'), isRequired: false },
+                { name: 'date', isRequired: false },
                 { name: 'skip', isRequired: false }
             ]
         }
